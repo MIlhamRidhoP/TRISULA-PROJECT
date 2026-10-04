@@ -18,12 +18,21 @@ def _not_implemented(args: argparse.Namespace, config: Config) -> int:
     return 1
 
 
+def _sample(args: argparse.Namespace, config: Config) -> int:
+    from trisula.sampling import run_sample
+
+    run_sample(config, args.source)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trisula", description="LLM review on top of CodeQL findings.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="path to trisula.yml")
     commands = parser.add_subparsers(dest="command", required=True, metavar="command")
 
-    commands.add_parser("sample", help="sample test cases from OWASP Benchmark")
+    sample = commands.add_parser("sample", help="sample test cases from OWASP Benchmark")
+    sample.add_argument("--source", type=Path, help="local BenchmarkJava checkout instead of cloning")
+    sample.set_defaults(handler=_sample)
     commands.add_parser("sanitize", help="remove comments and identifying names from sampled cases")
     commands.add_parser("prefilter", help="select files that may be sent to an LLM")
     commands.add_parser("parse-sarif", help="convert CodeQL SARIF into findings")
@@ -40,7 +49,8 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("demo", help="run every stage with the mock model on a small local fixture")
 
     for subparser in commands.choices.values():
-        subparser.set_defaults(handler=_not_implemented)
+        if subparser.get_default("handler") is None:
+            subparser.set_defaults(handler=_not_implemented)
     return parser
 
 

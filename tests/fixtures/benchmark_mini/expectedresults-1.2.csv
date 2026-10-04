@@ -1,0 +1,19 @@
+# test name, category, real vulnerability, cwe, Benchmark version: 1.2, 2016-06-1
+BenchmarkTest00001,sqli,true,89
+BenchmarkTest00002,sqli,true,89
+BenchmarkTest00003,sqli,true,89
+BenchmarkTest00004,sqli,true,89
+BenchmarkTest00005,sqli,false,89
+BenchmarkTest00006,sqli,false,89
+BenchmarkTest00007,sqli,false,89
+BenchmarkTest00008,sqli,false,89
+BenchmarkTest00009,xss,true,79
+BenchmarkTest00010,xss,true,79
+BenchmarkTest00011,xss,true,79
+BenchmarkTest00012,xss,true,79
+BenchmarkTest00013,xss,false,79
+BenchmarkTest00014,xss,false,79
+BenchmarkTest00015,xss,false,79
+BenchmarkTest00016,xss,false,79
+BenchmarkTest00017,cmdi,true,78
+BenchmarkTest00018,cmdi,false,78

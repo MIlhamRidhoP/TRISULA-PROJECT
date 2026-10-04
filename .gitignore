@@ -15,3 +15,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+
+# Dibangkitkan ulang oleh `sample` dan `sanitize`. Commit dengan `git add -f` setelah benchmark.ref dikunci.
+data/
