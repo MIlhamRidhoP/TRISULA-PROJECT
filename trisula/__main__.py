@@ -7,35 +7,27 @@ from pathlib import Path
 from trisula.config import DEFAULT_CONFIG_PATH, Config, TrisulaError, ensure_supported_mode, load_config
 
 
-def _not_implemented(args: argparse.Namespace, config: Config) -> int:
-    logging.error("%s: not implemented yet", args.command)
-    return 1
-
-
-def _sample(args: argparse.Namespace, config: Config) -> int:
+def _sample(args: argparse.Namespace, config: Config) -> None:
     from trisula.sampling import run_sample
 
     run_sample(config, args.source)
-    return 0
 
 
-def _sanitize(args: argparse.Namespace, config: Config) -> int:
+def _sanitize(args: argparse.Namespace, config: Config) -> None:
     from trisula.sanitize import run_sanitize
 
     run_sanitize(config)
-    return 0
 
 
-def _parse_sarif(args: argparse.Namespace, config: Config) -> int:
+def _parse_sarif(args: argparse.Namespace, config: Config) -> None:
     from trisula.codeql import run_parse_sarif
 
     codeql_dir = config.results_dir / "codeql"
     sarif_paths = args.sarif or sorted(codeql_dir.glob("*.sarif"))
     run_parse_sarif(config, sarif_paths, args.timing or codeql_dir / "timing.json")
-    return 0
 
 
-def _review(args: argparse.Namespace, config: Config) -> int:
+def _review(args: argparse.Namespace, config: Config) -> None:
     from trisula.review import run_review
 
     scenario = config.llm.scenarios.get(args.scenario)
@@ -43,35 +35,36 @@ def _review(args: argparse.Namespace, config: Config) -> int:
         raise TrisulaError(f"scenario {args.scenario} is not configured")
     runs = [args.run] if args.run else list(range(1, scenario.runs + 1))
     run_review(config, args.model, args.scenario, runs, args.limit)
-    return 0
 
 
-def _ensemble(args: argparse.Namespace, config: Config) -> int:
+def _ensemble(args: argparse.Namespace, config: Config) -> None:
     from trisula.ensemble import run_ensemble
 
     run_ensemble(config)
-    return 0
 
 
-def _evaluate(args: argparse.Namespace, config: Config) -> int:
+def _evaluate(args: argparse.Namespace, config: Config) -> None:
     from trisula.evaluate import evaluate
 
     evaluate(config)
-    return 0
 
 
-def _report(args: argparse.Namespace, config: Config) -> int:
+def _report(args: argparse.Namespace, config: Config) -> None:
     from trisula.report.build import run_report
 
     run_report(config)
-    return 0
 
 
-def _prefilter(args: argparse.Namespace, config: Config) -> int:
+def _prefilter(args: argparse.Namespace, config: Config) -> None:
     from trisula.prefilter import run_prefilter
 
     run_prefilter(config, args.gitleaks_report)
-    return 0
+
+
+def _demo(args: argparse.Namespace, config: Config) -> None:
+    from trisula.demo import run_demo
+
+    run_demo(args.config)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -107,11 +100,9 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.set_defaults(handler=_evaluate)
     report = commands.add_parser("report", help="write SARIF, PR comment, HTML report, and figures")
     report.set_defaults(handler=_report)
-    commands.add_parser("demo", help="run every stage with the mock model on a small local fixture")
+    demo = commands.add_parser("demo", help="run every stage with the mock model on a small local fixture")
+    demo.set_defaults(handler=_demo)
 
-    for subparser in commands.choices.values():
-        if subparser.get_default("handler") is None:
-            subparser.set_defaults(handler=_not_implemented)
     return parser
 
 
@@ -124,10 +115,11 @@ def main(argv: list[str] | None = None) -> int:
     config = load_config(args.config)
     try:
         ensure_supported_mode(config)
-        return args.handler(args, config)
+        args.handler(args, config)
     except TrisulaError as exc:
         logging.error("%s", exc)
         return 1
+    return 0
 
 
 if __name__ == "__main__":

@@ -106,47 +106,47 @@ def member_finding(model: str, vulnerable: bool | None, error: str | None = None
 
 def vote(*members: Finding, codeql_detected: bool = False) -> Finding:
     findings = [codeql_finding("CWE-89", codeql_detected), *members]
-    (result,) = ensemble_findings(findings, ["gemini", "gpt", "grok"], run=1, min_votes=2)
-    return result
+    (ens,) = ensemble_findings(findings, ["gemini", "gpt", "grok"], run=1, min_votes=2)
+    return ens
 
 
 def test_two_of_three_votes_make_case_vulnerable():
-    result = vote(member_finding("gemini", True), member_finding("gpt", True), member_finding("grok", False))
-    assert (result.vulnerable, result.fallback, result.scenario) == (True, False, "ENS")
+    ens = vote(member_finding("gemini", True), member_finding("gpt", True), member_finding("grok", False))
+    assert (ens.vulnerable, ens.fallback, ens.scenario) == (True, False, "ENS")
 
 
 def test_one_of_three_votes_is_not_enough():
-    result = vote(
+    ens = vote(
         member_finding("gemini", True),
         member_finding("gpt", False),
         member_finding("grok", False),
         codeql_detected=True,
     )
-    assert (result.vulnerable, result.fallback) == (False, False)
+    assert (ens.vulnerable, ens.fallback) == (False, False)
 
 
 def test_errored_member_does_not_vote():
     # gpt error jatuh ke CodeQL (rentan) di Skenario B, tapi suara fallback itu tidak boleh dihitung.
-    result = vote(
+    ens = vote(
         member_finding("gemini", True),
         member_finding("gpt", True, error="invalid_format"),
         member_finding("grok", False),
     )
-    assert (result.vulnerable, result.fallback) == (False, False)
-    assert result.reason.startswith("1 of 2")
+    assert (ens.vulnerable, ens.fallback) == (False, False)
+    assert ens.reason.startswith("1 of 2")
 
 
 def test_too_few_valid_votes_fall_back_to_codeql():
-    result = vote(
+    ens = vote(
         member_finding("gemini", False),
         member_finding("gpt", None, error="network_error"),
         member_finding("grok", None, error="invalid_format"),
         codeql_detected=True,
     )
-    assert (result.vulnerable, result.fallback) == (True, True)
+    assert (ens.vulnerable, ens.fallback) == (True, True)
 
 
 def test_other_runs_are_ignored():
     other_run = member_finding("gpt", True).model_copy(update={"run": 2})
-    result = vote(member_finding("gemini", True), other_run, member_finding("grok", False))
-    assert result.vulnerable is False
+    ens = vote(member_finding("gemini", True), other_run, member_finding("grok", False))
+    assert ens.vulnerable is False

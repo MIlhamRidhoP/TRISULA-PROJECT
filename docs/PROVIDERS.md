@@ -67,6 +67,10 @@ Catatan:
 - Nilai `thinking_level` yang tersedia untuk model Pro **[verifikasi]**. Ada indikasi model Pro hanya menerima
   `low` dan `high` (default `high`). Jika `medium` tidak diterima, **jangan memilih sendiri**. Catat di
   `NOTES.md` sebagai open question, karena ini keputusan desain (penyetaraan reasoning antar-model).
+  Dicek 4 Oktober 2026: halaman thinking mencantumkan `low`, `medium`, `high` untuk `gemini-3.1-pro-preview`.
+- Dicek 4 Oktober 2026: halaman structured output kini hanya mencontohkan Interactions API
+  (`client.interactions.create` dengan `response_format`). `generate_content` dengan `response_json_schema` masih
+  ada di SDK google-genai 2.28 dan tidak ditandai deprecated, jadi adaptor tetap memakainya.
 - Usage: `usage_metadata.prompt_token_count`, `candidates_token_count`, `thoughts_token_count`. Token berpikir
   ditagih dengan tarif output.
 - Model Pro tidak tersedia di free tier. Project Google Cloud harus mengaktifkan billing.
@@ -128,7 +132,7 @@ response = client.responses.create(model="grok-4.7", ...)
 Catatan:
 - xAI menyarankan Responses API. Chat Completions berstatus legacy.
 - Tingkat reasoning yang tersedia: `low`, `medium`, `high` (default), `xhigh`. Cara mengirimnya di Responses API
-  (`reasoning.effort` atau parameter lain) **[verifikasi]**.
+  (`reasoning.effort` atau parameter lain) **[verifikasi]**. Dicek 4 Oktober 2026: `reasoning: {"effort": ...}`.
 - Respons Responses API dari `grok-4.7` selalu menyertakan `reasoning.encrypted_content`. Karena panggilan
   bersifat satu giliran, bagian ini diabaikan, tapi jangan sampai ikut tersimpan berulang di log sehingga file
   membengkak. Simpan teks output dan usage saja di `raw_response`.

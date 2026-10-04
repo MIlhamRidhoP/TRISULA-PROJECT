@@ -4,7 +4,7 @@ import pytest
 
 from trisula.codeql import codeql_findings, normalize_cwe_tag, parse_sarif, run_parse_sarif
 
-from .conftest import FIXTURES
+from .conftest import DEMO_SARIF, DEMO_TIMING
 
 CWE_IDS = ["CWE-89", "CWE-79"]
 CASES = "targets/benchmark/src/main/java/com/example/webapp/cases/"
@@ -12,7 +12,7 @@ CASES = "targets/benchmark/src/main/java/com/example/webapp/cases/"
 
 @pytest.fixture
 def sarif() -> dict:
-    return json.loads((FIXTURES / "codeql/demo.sarif").read_text(encoding="utf-8"))
+    return json.loads(DEMO_SARIF.read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize(
@@ -80,6 +80,6 @@ def test_findings_only_count_alerts_with_matching_cwe(sarif):
 
 
 def test_parse_sarif_command_records_duration(mini_config):
-    results = run_parse_sarif(mini_config, [FIXTURES / "codeql/demo.sarif"], FIXTURES / "codeql/timing.json")
+    results = run_parse_sarif(mini_config, [DEMO_SARIF], DEMO_TIMING)
     assert results.duration_seconds == 84.0
     assert (mini_config.results_dir / "codeql/alerts.json").exists()

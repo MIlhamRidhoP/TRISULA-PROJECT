@@ -71,13 +71,13 @@ def mcnemar_test(b: int, c: int, exact_below: int) -> McNemarResult:
 
     Versi exact binomial jika b + c < exact_below, selain itu chi-square dengan koreksi kontinuitas."""
     exact = b + c < exact_below
-    result = mcnemar([[0, b], [c, 0]], exact=exact, correction=True)
+    bunch = mcnemar([[0, b], [c, 0]], exact=exact, correction=True)
     return McNemarResult(
         b=b,
         c=c,
         method="exact" if exact else "chi2_corrected",
-        statistic=float(result.statistic),
-        p_value=float(result.pvalue),
+        statistic=float(bunch.statistic),
+        p_value=float(bunch.pvalue),
     )
 
 

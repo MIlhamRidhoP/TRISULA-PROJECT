@@ -228,18 +228,18 @@ def mcnemar_comparisons(
         common = sorted(set(first_correct) & set(second_correct))
         b = sum(1 for c in common if first_correct[c] and not second_correct[c])
         c = sum(1 for c in common if not first_correct[c] and second_correct[c])
-        result = mcnemar_test(b, c, config.evaluation.mcnemar_exact_below)
+        test = mcnemar_test(b, c, config.evaluation.mcnemar_exact_below)
         comparisons.append(
             {
                 "first": first,
                 "second": second,
                 "question": question,
                 "cases": len(common),
-                "b_first_only_correct": result.b,
-                "c_second_only_correct": result.c,
-                "method": result.method,
-                "statistic": result.statistic,
-                "p_value": result.p_value,
+                "b_first_only_correct": test.b,
+                "c_second_only_correct": test.c,
+                "method": test.method,
+                "statistic": test.statistic,
+                "p_value": test.p_value,
             }
         )
     adjusted = holm_adjust([c["p_value"] for c in comparisons], config.evaluation.alpha)

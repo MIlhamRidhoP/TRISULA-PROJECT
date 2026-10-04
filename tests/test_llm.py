@@ -117,10 +117,10 @@ def test_api_key_never_reaches_logs_cache_or_outputs(tmp_path, monkeypatch, capl
     def create(**kwargs):
         if not scripted:
             return fake_openai_response(valid_verdicts_json())
-        item = scripted.pop(0)
-        if isinstance(item, Exception):
-            raise item
-        return item
+        reply = scripted.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
 
     fake_client = SimpleNamespace(responses=SimpleNamespace(create=create))
     monkeypatch.setattr(openai, "OpenAI", lambda **kwargs: fake_client)

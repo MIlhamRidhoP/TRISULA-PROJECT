@@ -4,9 +4,12 @@ import pytest
 import yaml
 
 from trisula.config import DEFAULT_CONFIG_PATH, Config
+from trisula.demo import DEMO_DATA, DEMO_MEMBERS
 
 FIXTURES = Path(__file__).parent / "fixtures"
-BENCHMARK_MINI = FIXTURES / "benchmark_mini"
+BENCHMARK_MINI = DEMO_DATA / "benchmark_mini"
+DEMO_SARIF = DEMO_DATA / "codeql.sarif"
+DEMO_TIMING = DEMO_DATA / "codeql_timing.json"
 
 
 def make_config(root: Path, **overrides) -> Config:
@@ -42,11 +45,11 @@ def prepare_workspace(root: Path, **overrides) -> Config:
     run_sample(config, source_dir=BENCHMARK_MINI)
     run_sanitize(config)
     run_prefilter(config)
-    run_parse_sarif(config, [FIXTURES / "codeql/demo.sarif"], FIXTURES / "codeql/timing.json")
+    run_parse_sarif(config, [DEMO_SARIF], DEMO_TIMING)
     return config
 
 
-MOCK_MEMBERS = ["mock-a", "mock-b", "mock-c"]
+MOCK_MEMBERS = DEMO_MEMBERS
 
 
 def mock_ensemble_overrides() -> dict:

@@ -63,3 +63,16 @@ def test_output_files_are_written(evaluated):
     assert (
         (config.results_dir / "summary.csv").read_text(encoding="utf-8").startswith("scenario,scope,cwe,n,tp")
     )
+
+
+def test_demo_runs_every_stage_offline(tmp_path, monkeypatch):
+    for variable in ("GEMINI_API_KEY", "OPENAI_API_KEY", "XAI_API_KEY"):
+        monkeypatch.delenv(variable, raising=False)
+    from trisula.config import DEFAULT_CONFIG_PATH
+    from trisula.demo import run_demo
+
+    report = run_demo(DEFAULT_CONFIG_PATH, root=tmp_path / "demo")
+    assert report.exists()
+    summary = json.loads((tmp_path / "demo/results/summary.json").read_text(encoding="utf-8"))
+    assert "ENS" in summary["scenarios"]
+    assert summary["scenarios"]["A"]["metrics"]["pooled"]["tp"] == 5

@@ -11,7 +11,7 @@ from trisula.report.pr_comment import render_pr_comment
 from trisula.review import run_review
 from trisula.schema import Finding
 
-from .conftest import FIXTURES, MOCK_MEMBERS, mock_ensemble_overrides, prepare_workspace
+from .conftest import DEMO_SARIF, FIXTURES, MOCK_MEMBERS, mock_ensemble_overrides, prepare_workspace
 
 
 def sarif_validator() -> jsonschema.Draft4Validator:
@@ -44,7 +44,7 @@ def test_exported_sarif_is_valid_against_sarif_schema(reported):
 
 
 def test_codeql_fixture_is_valid_sarif():
-    sarif_validator().validate(json.loads((FIXTURES / "codeql/demo.sarif").read_text(encoding="utf-8")))
+    sarif_validator().validate(json.loads(DEMO_SARIF.read_text(encoding="utf-8")))
 
 
 def test_html_report_has_both_sections_and_inline_figures(reported):

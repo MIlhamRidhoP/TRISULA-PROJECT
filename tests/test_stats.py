@@ -40,18 +40,18 @@ def test_empty_matrix_is_all_null():
 
 def test_mcnemar_exact_for_few_discordant_pairs():
     # b=10, c=2: p = 2 * (C(12,0) + C(12,1) + C(12,2)) / 2^12 = 158 / 4096
-    result = mcnemar_test(b=10, c=2, exact_below=25)
-    assert result.method == "exact"
-    assert result.statistic == 2
-    assert result.p_value == pytest.approx(0.0385742, abs=1e-7)
+    outcome = mcnemar_test(b=10, c=2, exact_below=25)
+    assert outcome.method == "exact"
+    assert outcome.statistic == 2
+    assert outcome.p_value == pytest.approx(0.0385742, abs=1e-7)
 
 
 def test_mcnemar_chi_square_with_continuity_correction():
     # (|30 - 10| - 1)^2 / 40 = 9.025, p dari tabel chi-square df=1
-    result = mcnemar_test(b=30, c=10, exact_below=25)
-    assert result.method == "chi2_corrected"
-    assert result.statistic == pytest.approx(9.025)
-    assert result.p_value == pytest.approx(0.0026631, abs=1e-6)
+    outcome = mcnemar_test(b=30, c=10, exact_below=25)
+    assert outcome.method == "chi2_corrected"
+    assert outcome.statistic == pytest.approx(9.025)
+    assert outcome.p_value == pytest.approx(0.0026631, abs=1e-6)
 
 
 def test_mcnemar_switches_method_at_threshold():

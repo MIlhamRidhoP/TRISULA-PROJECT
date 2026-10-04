@@ -1,7 +1,7 @@
 [project]
 name = "trisula"
 version = "0.1.0"
-description = "LLM review layer on top of CodeQL, with an evaluation harness for OWASP Benchmark"
+description = "LLM review of CodeQL findings, scored against OWASP Benchmark"
 requires-python = ">=3.12"
 license = "MIT"
 
