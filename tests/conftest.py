@@ -27,3 +27,27 @@ def make_config(root: Path, **overrides) -> Config:
 @pytest.fixture
 def mini_config(tmp_path: Path) -> Config:
     return make_config(tmp_path)
+
+
+def prepare_workspace(root: Path, **overrides) -> Config:
+    """Fixture benchmark_mini yang sudah disampling, disanitasi, dan punya alerts.json dari SARIF fixture."""
+    from trisula.codeql import run_parse_sarif
+    from trisula.sampling import run_sample
+    from trisula.sanitize import run_sanitize
+
+    config = make_config(root, **overrides)
+    run_sample(config, source_dir=BENCHMARK_MINI)
+    run_sanitize(config)
+    run_parse_sarif(config, [FIXTURES / "codeql/demo.sarif"], FIXTURES / "codeql/timing.json")
+    return config
+
+
+MOCK_MEMBERS = ["mock-a", "mock-b", "mock-c"]
+
+
+def mock_ensemble_overrides() -> dict:
+    mock = yaml.safe_load(DEFAULT_CONFIG_PATH.read_text(encoding="utf-8"))["llm"]["models"]["mock"]
+    overrides = {f"llm.models.{key}": dict(mock) for key in MOCK_MEMBERS}
+    overrides["ensemble.members"] = MOCK_MEMBERS
+    overrides["llm.active_models"] = MOCK_MEMBERS
+    return overrides

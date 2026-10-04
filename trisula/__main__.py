@@ -53,6 +53,13 @@ def _ensemble(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
+def _evaluate(args: argparse.Namespace, config: Config) -> int:
+    from trisula.evaluate import evaluate
+
+    evaluate(config)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trisula", description="LLM review on top of CodeQL findings.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="path to trisula.yml")
@@ -80,7 +87,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     ensemble = commands.add_parser("ensemble", help="normalize verdicts and build the ensemble scenario")
     ensemble.set_defaults(handler=_ensemble)
-    commands.add_parser("evaluate", help="compute metrics against ground truth")
+    evaluate = commands.add_parser("evaluate", help="compute metrics against ground truth")
+    evaluate.set_defaults(handler=_evaluate)
     commands.add_parser("report", help="write SARIF, PR comment, HTML report, and figures")
     commands.add_parser("demo", help="run every stage with the mock model on a small local fixture")
 

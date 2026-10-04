@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
@@ -8,24 +7,13 @@ import pytest
 from google.genai import errors as genai_errors
 from tenacity import wait_none
 
-from trisula.codeql import run_parse_sarif
 from trisula.llm.base import CompletionRequest, FatalAPIError, TransientAPIError
 from trisula.llm.mock import MockAdapter
 from trisula.review import run_review
-from trisula.sampling import run_sample
-from trisula.sanitize import run_sanitize
 
-from .conftest import BENCHMARK_MINI, FIXTURES, make_config
+from .conftest import make_config, prepare_workspace
 
 FAKE_KEY = "sk-trisula-test-7f3a9c1e5b2d4086a1c3e5f7"
-
-
-def prepare_workspace(root: Path, **overrides):
-    config = make_config(root, **overrides)
-    run_sample(config, source_dir=BENCHMARK_MINI)
-    run_sanitize(config)
-    run_parse_sarif(config, [FIXTURES / "codeql/demo.sarif"], None)
-    return config
 
 
 def read_call_log(config, scenario: str, model: str, run: int) -> list[dict]:
