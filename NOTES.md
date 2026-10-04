@@ -1,6 +1,7 @@
 # Catatan Implementasi
 
-Ditulis 5 Oktober 2026 setelah Fase 1 sampai 11 selesai.
+Ditulis 5 Oktober 2026 setelah Fase 1 sampai 11 selesai, lalu diperbarui setelah keputusan pemilik atas open
+questions.
 
 ## Status fase
 
@@ -18,54 +19,47 @@ Ditulis 5 Oktober 2026 setelah Fase 1 sampai 11 selesai.
 | 9 | SARIF, komentar PR, HTML, grafik | `21f4daa` |
 | 10 | Prefilter dan Gitleaks | `6ce0a99` |
 | 11 | Demo, README, lisensi | `df107ff` |
+| Keputusan 1 | Aturan 3 diperluas, aturan 5 dipersempit, `allowed_matches`, ref dikunci | `139ef17` |
+| Keputusan 2 | `data/` di-commit (metadata saja) | `b1fca23` |
+| Keputusan 3 | Compile tanpa Spotless, unggah SARIF tidak memblokir | `d34d52f` |
 
-Tes: 119 lulus, 0 gagal (`pytest -q`). `ruff check .` dan `ruff format --check .` bersih. `actionlint` 1.7.12
+Tes: 129 lulus, 0 gagal (`pytest -q`). `ruff check .` dan `ruff format --check .` bersih. `actionlint` 1.7.12
 bersih untuk kedua workflow.
 
 Uji clone bersih: repositori di-clone ke folder baru, venv Python 3.12 baru, `pip install -r requirements.txt`,
 lalu `python -m trisula demo` selesai sekitar 3 detik tanpa API key, dan seluruh tes lulus di clone tersebut.
 
+## Keputusan yang sudah diterapkan
+
+### Sanitasi (sebelumnya open question 1)
+
+Diterapkan sesuai keputusan, dan DATASET.md bagian 5 sudah disesuaikan:
+- Aturan 3: di string literal mana pun, segmen `/<kategori>-NN/` untuk kategori apa pun di expected results
+  diganti `servlet_path_prefix`. Empat kasus `getRequestDispatcher` kini menjadi `"/case/CaseNNNN.html"`.
+- Aturan 5: yang diperiksa hanya `benchmarktest`, `owasp.benchmark`, `org/owasp/benchmark`, kata `benchmark`
+  utuh sebagai identifier atau segmen path, dan `sqli`/`xss` di string literal atau sebagai segmen path.
+  "Identifier" saya tafsirkan sebagai kata utuh, jadi `benchmarking` tidak dihitung; `BenchmarkTest` tetap
+  tertangkap lewat pola `benchmarktest`.
+- `allowed_matches: [X-XSS-Protection]` dengan komentar alasan di konfigurasi.
+
+Hasil pada sampel asli (commit benchmark terkunci, seed 42): 200 kasus tersanitasi, semua ter-parse, **tidak ada
+hit tersisa**, jadi tidak ada daftar hit untuk ditinjau. Yang tersisa di kode test case dan terlihat oleh model:
+header `X-XSS-Protection` di 100 kasus xss (diizinkan) dan `org.owasp.esapi` di 48 kasus (library, sesuai
+keputusan). Header itu tetap menjadi petunjuk kategori bagi model; layak disebut di ancaman validitas paper.
+
+### `benchmark.ref` dan `data/` (sebelumnya open question 2)
+
+`benchmark.ref` dikunci ke `8b67a88d73b2594570fc21150705283de884620b`. `data/` tidak lagi di-.gitignore.
+`sample` dan `sanitize` dijalankan ulang dengan konfigurasi asli. Yang di-commit: `data/sample_list.csv`,
+`data/name_mapping.csv`, dan juga `data/sample_meta.json` (commit benchmark, jumlah kandidat, daftar kategori yang
+dibaca `sanitize`). Ketiganya metadata, bukan kode benchmark; catatan ini ada di README dan DATASET.md.
+`targets/` tetap di-.gitignore.
+
 ## Open questions
 
-### 1. Pemeriksaan sisa string menghentikan sanitasi pada data asli
+Tidak ada yang terblokir. Butir di bawah adalah keputusan implementasi yang sebaiknya dikonfirmasi.
 
-`python -m trisula sanitize` pada sampel asli (BenchmarkJava commit `8b67a88d73b2594570fc21150705283de884620b`,
-seed 42) berhenti dengan 199 temuan, sesuai DATASET.md bagian 5 butir 5. Target tidak berubah karena semua
-perubahan baru ditulis setelah pemeriksaan lolos. Token pemicu:
-
-| Token | Jumlah file | Sifat |
-|---|---|---|
-| `X-XSS-Protection` (header) | 100 | nama header HTTP, tapi hanya muncul di kasus xss |
-| `org.owasp.esapi.ESAPI` | 48 | library encoder ESAPI |
-| `java.util.HashMap` | 29 | kelas JDK, cocok dengan kategori `hash` |
-| `org.owasp` lalu `.esapi` di baris berikutnya | 6 | panggilan ESAPI yang terpotong baris |
-| `getRequestDispatcher("/sqli-02/BenchmarkTestNNNNN.html")` | 4 | kebocoran kategori yang tidak dicakup aturan 3 |
-
-Keputusan yang dibutuhkan:
-- Isi `benchmark.sanitize.allowed_matches`. Usulan: `X-XSS-Protection`, `org.owasp.esapi`, `java.util.HashMap`.
-  Pencocokan dilakukan per baris tanpa membedakan huruf besar kecil, jadi 6 kasus ESAPI yang terpotong baris
-  tetap gagal. Pilihannya: tambahkan `org.owasp` (lebih longgar), atau ubah pencocokan agar memakai teks yang
-  barisnya sudah disambung.
-- Header `X-XSS-Protection: 0` hanya ada di kasus xss, jadi tetap menjadi petunjuk kategori walaupun sah sebagai
-  kode. Perlu diputuskan apakah dibiarkan (dan dibahas sebagai ancaman validitas) atau dihapus saat sanitasi.
-- Empat kasus meneruskan request ke `/sqli-0N/<nama>.html`. Usulan: perluas aturan 3 sehingga setiap string
-  literal berpola `/<kategori>-NN/<nama asli>` diganti path netral yang sama.
-
-Sampai diputuskan, pipeline penuh pada data asli (lokal maupun di GitHub Actions) berhenti di tahap `sanitize`.
-Demo dan tes memakai fixture sendiri dengan `allowed_matches: [X-XSS-Protection]`.
-
-Sebagai uji coba saja, sanitasi dengan `allowed_matches` sementara (`X-XSS-Protection`, `org.owasp`,
-`java.util.HashMap`, `/sqli-0`, tidak di-commit) berhasil untuk 200 kasus, semua file ter-parse, prefilter
-meloloskan 200 file, dan `review --model mock --scenario B --run 1` berjalan untuk 200 kasus.
-
-### 2. Mengunci `benchmark.ref`
-
-DATASET.md meminta `master` diganti hash commit saat sampling pertama. Saya tidak mengubah nilai konfigurasi.
-Commit yang dipakai saat pengembangan: `8b67a88d73b2594570fc21150705283de884620b` (tercatat juga di
-`data/sample_meta.json`). `data/` sengaja di-.gitignore sampai ref dikunci; setelah itu commit dengan
-`git add -f data/sample_list.csv data/name_mapping.csv data/sample_meta.json`.
-
-### 3. Keputusan implementasi yang perlu dikonfirmasi
+### Keputusan implementasi yang perlu dikonfirmasi
 
 Hal-hal berikut tidak diatur eksplisit di DESIGN.md, jadi saya memilih yang paling wajar:
 
@@ -94,17 +88,33 @@ Hal-hal berikut tidak diatur eksplisit di DESIGN.md, jadi saya memilih yang pali
 - **Job prefilter** juga menyiapkan target (`sample`, `sanitize`, `mvn compile`) karena `targets/` tidak di-commit.
   Untuk target non-benchmark, dua langkah pertama perlu dihapus dari workflow.
 
+## Verifikasi lokal
+
+- **Kompilasi Maven** (JDK 24.0.2, Maven 3.9.11): `mvn -q -B -DskipTests compile` pada `targets/benchmark` gagal,
+  bukan karena kode, tapi karena plugin Spotless di pom BenchmarkJava menjalankan `spotless:apply` saat build dan
+  mencari `DevStyleHtml.prefs` yang ikut terbuang saat pemangkasan. Kalau berhasil berjalan, `apply` akan
+  memformat ulang kode tersanitasi dan menggeser nomor baris, jadi Spotless memang harus dilewati. Dengan
+  `-Dspotless.skip=true` kompilasi berhasil dan 200 kelas `CaseNNNN` terbentuk. File sumber tidak tersentuh
+  (waktu modifikasi sama dengan saat sanitasi). Langkah compile di workflow sudah memakai flag itu.
+- **Gitleaks** 8.30.1 (Windows, checksum diverifikasi) terhadap 200 kasus: `no leaks found`. Prefilter dengan
+  Gitleaks aktif meloloskan 200 file, tanpa pengecualian dan tanpa peringatan PII.
+- **Pipeline `models=mock` tanpa secret**: matrix dari input `models=mock` menghasilkan dua job (`mock`/B dan
+  `mock`/C) dengan `key_env` kosong, sehingga semua variabel kunci bernilai string kosong dan adaptor mock tidak
+  membaca kunci apa pun. Urutan perintah Python semua job dijalankan di lokal pada 200 kasus asli (CodeQL diganti
+  SARIF kosong karena CodeQL CLI tidak terpasang): `parse-sarif`, `review` B (3 run) dan C, `ensemble` (ENS
+  dilewati dengan peringatan karena anggota ensemble bukan mock), `evaluate`, dan `report` semuanya selesai dengan
+  exit 0.
+- Satu hal yang bisa menggagalkan run tanpa secret sudah diperbaiki: sebelumnya SARIF diunggah di dalam langkah
+  `analyze`, sehingga repositori yang belum mengaktifkan Code Scanning akan menghentikan job `codeql` dan seluruh
+  pipeline. Sekarang `analyze` memakai `upload: never`, lalu unggahan dilakukan di langkah `upload-sarif`
+  terpisah dengan `continue-on-error: true` (begitu juga unggahan SARIF per model di job `report`).
+
 ## TODO tersisa
 
-- Workflow belum pernah dijalankan di GitHub; yang sudah dipastikan hanya lolos `actionlint`. Hal yang perlu
-  dilihat di run pertama: `paths` CodeQL untuk Java dengan `build-mode: none`, unggah SARIF tanpa input
-  `category` (tiap file memakai `automationDetails.id`), flag `gh pr comment --edit-last --create-if-none`, dan
-  struktur folder hasil `download-artifact` dengan `merge-multiple`.
-- `mvn -q -DskipTests compile` pada proyek hasil pangkas belum dicoba di lokal; di workflow hasilnya dicatat di
-  `results/compile_status.json` tanpa menghentikan pipeline.
-- Gitleaks belum dijalankan terhadap 200 kasus asli. Jika aturan `generic-api-key` menandai kasus benchmark,
-  kasus itu keluar dari input LLM dan jumlah sampel efektif berkurang. Periksa `results/prefilter.json` di run
-  pertama.
+- Workflow belum pernah dijalankan di GitHub; pemeriksaan di atas hanya simulasi lokal ditambah `actionlint`.
+  Yang perlu dilihat di run pertama: `paths` CodeQL untuk Java dengan `build-mode: none`, unggah SARIF per model
+  tanpa input `category`, flag `gh pr comment --edit-last --create-if-none`, dan struktur folder hasil
+  `download-artifact` dengan `merge-multiple`.
 - Penempatan label di grafik 2 dan 4 otomatis (diselang-seling atas dan bawah). Dengan data asli, label mungkin
   masih perlu dirapikan manual untuk paper.
 - Laporan HTML belum punya tooltip hover pada grafik; angka lengkap ada di tabel di bawahnya.
@@ -131,17 +141,14 @@ Jalankan `python -m trisula review --model <kunci> --scenario B --run 1 --limit 
 
 ## Usulan perubahan
 
-- **`config/trisula.yml`**: isi `allowed_matches` (lihat Open question 1). Komentar di baris
-  `gemini.reasoning` ("Pro mungkin hanya menerima low/high") sudah tidak berlaku; dokumentasi per 4 Oktober 2026
-  mencantumkan `medium`. Nilainya tidak saya ubah.
-- **DATASET.md aturan 3**: perluas penggantian path servlet ke semua string literal berpola
-  `/<kategori>-NN/<nama asli>`, bukan hanya di `@WebServlet`.
-- **DATASET.md aturan 5**: pertimbangkan pencocokan kata utuh untuk nama kategori. Pencocokan substring membuat
-  `hash` cocok dengan `HashMap` dan `hashCode`, sehingga daftar pengecualian akan panjang.
+- **`config/trisula.yml`**: komentar di baris `gemini.reasoning` ("Pro mungkin hanya menerima low/high") sudah
+  tidak berlaku; dokumentasi per 4 Oktober 2026 mencantumkan `medium`. Nilainya tidak saya ubah.
 - **PROVIDERS.md**: pertimbangkan `store: false` di Responses API (OpenAI dan xAI) agar respons tidak disimpan di
   sisi provider. Belum saya pakai karena belum dipastikan xAI menerima parameter itu, dan parameter yang tidak
   dikenal menghentikan proses (error 4xx).
 - **DESIGN.md bagian 6**: tambahkan `ensemble` ke daftar nilai `source`.
+- **DESIGN.md bagian 12**: tambahkan header `X-XSS-Protection` yang hanya muncul di kasus xss sebagai petunjuk
+  kategori yang sengaja dibiarkan.
 
 PROVIDERS.md sudah saya perbarui untuk dua butir `[verifikasi]` yang terjawab oleh dokumentasi resmi (tingkat
 thinking Gemini 3.1 Pro dan cara mengirim reasoning ke Grok), sesuai instruksi di dokumen itu sendiri.
@@ -169,6 +176,6 @@ cakupan sangat kecil sudah diganti.
 
 ## Pengecekan kepemilikan commit
 
-Perintah `git log --format='%an <%ae>%n%B' | grep -iE 'claude|anthropic|co-authored'` pada seluruh riwayat
-(12 commit, `089523c` sampai `df107ff`) tidak mengeluarkan baris apa pun. Semua commit ber-author
-Muhammad Ilham Ridho Priyadi. Pengecekan yang sama dijalankan setelah setiap commit dan selalu kosong.
+Perintah `git log --format='%an <%ae>%n%B' | grep -iE 'claude|anthropic|co-authored'` dijalankan setelah setiap
+commit dan pada seluruh riwayat (`089523c` sampai commit catatan ini). Hasilnya selalu kosong. Semua commit
+ber-author Muhammad Ilham Ridho Priyadi.
