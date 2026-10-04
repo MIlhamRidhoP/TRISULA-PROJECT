@@ -46,6 +46,13 @@ def _review(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
+def _ensemble(args: argparse.Namespace, config: Config) -> int:
+    from trisula.ensemble import run_ensemble
+
+    run_ensemble(config)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trisula", description="LLM review on top of CodeQL findings.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="path to trisula.yml")
@@ -71,7 +78,8 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--limit", type=int, help="review only the first N files")
     review.set_defaults(handler=_review)
 
-    commands.add_parser("ensemble", help="normalize verdicts and build the ensemble scenario")
+    ensemble = commands.add_parser("ensemble", help="normalize verdicts and build the ensemble scenario")
+    ensemble.set_defaults(handler=_ensemble)
     commands.add_parser("evaluate", help="compute metrics against ground truth")
     commands.add_parser("report", help="write SARIF, PR comment, HTML report, and figures")
     commands.add_parser("demo", help="run every stage with the mock model on a small local fixture")
