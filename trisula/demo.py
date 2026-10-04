@@ -35,8 +35,6 @@ def demo_config(config_path: Path, root: Path) -> Config:
     raw["llm"]["prompt_file"] = str(Path(raw["llm"]["prompt_file"]).resolve())
     raw["ensemble"]["members"] = DEMO_MEMBERS
     raw["benchmark"]["sample"]["per_category"] = DEMO_PER_CATEGORY
-    # Fixture meniru header X-XSS-Protection dari BenchmarkJava; lihat NOTES.md Open questions 1.
-    raw["benchmark"]["sanitize"]["allowed_matches"] = ["X-XSS-Protection"]
     raw["prefilter"]["gitleaks"] = False
     return Config.model_validate({**raw, "root": root})
 

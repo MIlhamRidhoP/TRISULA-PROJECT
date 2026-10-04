@@ -5,8 +5,11 @@
 - Repositori: https://github.com/OWASP-Benchmark/BenchmarkJava
 - Lisensi: GPL-2.0. File benchmark **tidak boleh di-commit** ke repositori ini. Skrip mengunduh saat dijalankan
   dan menyimpannya di `.cache/benchmark/`.
-- Versi dikunci lewat `benchmark.ref` di konfigurasi. Saat pertama kali menjalankan sampling, ganti nilai `master`
-  dengan hash commit yang dipakai, lalu jangan diubah lagi selama eksperimen. Hash commit ini ditulis di paper.
+- Versi dikunci lewat `benchmark.ref` di konfigurasi: commit `8b67a88d73b2594570fc21150705283de884620b`. Jangan
+  diubah selama eksperimen. Hash commit ini ditulis di paper.
+- `data/` di repositori hanya berisi metadata hasil sampling dan sanitasi (`sample_list.csv`, `name_mapping.csv`,
+  `sample_meta.json`): nama test case, kategori, label, dan path baru. Tidak ada kode benchmark di sana. Kode
+  hasil pangkas ada di `targets/`, yang tidak di-commit.
 
 Hal yang perlu diverifikasi langsung dari repositori saat implementasi (jangan diasumsikan):
 - nama dan lokasi file expected results (biasanya `expectedresults-1.2.csv` di root),
@@ -88,14 +91,23 @@ Aturan, berurutan:
    nama header sering memakai nama test case), dan referensi lain.
 3. **Path servlet.** Nilai di anotasi `@WebServlet` diganti menjadi `<servlet_path_prefix>NNNN`
    (default `/case/0001`). Path aslinya mengandung nama kategori seperti `/sqli-00/`, yang merupakan
-   kebocoran label.
+   kebocoran label. Di string literal lain mana pun, segmen path berpola `/<kategori>-NN/` untuk kategori apa pun
+   di expected results diganti dengan `<servlet_path_prefix>`. Contoh: `getRequestDispatcher("/sqli-02/foo.html")`
+   menjadi `getRequestDispatcher("/case/foo.html")`.
 4. **Nama paket** (jika `sanitize.rename_package: true`). Ganti `package_from` menjadi `package_to` di
    deklarasi `package`, pernyataan `import`, nama lengkap kelas, dan struktur folder, di seluruh proyek yang
    dipangkas. Ini menghilangkan kata `owasp` dan `benchmark` dari kode yang dilihat model.
-5. **Pemeriksaan sisa.** Setelah sanitasi, cari string berikut di folder test case tanpa membedakan huruf besar
-   kecil: `benchmarktest`, `owasp`, `benchmark`, nama setiap kategori (`sqli`, `xss`, `cmdi`, `pathtraver`, dan
-   lainnya dari expected results). Jika ditemukan, laporkan file dan barisnya, lalu hentikan. Pengecualian yang
-   memang sah (misalnya nama metode library) dicatat eksplisit di konfigurasi, bukan diabaikan diam-diam.
+5. **Pemeriksaan sisa.** Setelah sanitasi, cari pola berikut di folder test case tanpa membedakan huruf besar
+   kecil:
+   - `benchmarktest`, `owasp.benchmark`, dan `org/owasp/benchmark` di mana pun;
+   - kata `benchmark` sebagai identifier atau segmen path utuh (bukan bagian kata lain);
+   - nama kategori dalam cakupan konfigurasi (`sqli`, `xss`) bila muncul di string literal atau sebagai segmen
+     path (misalnya `com.example.sqli`).
+
+   Nama kategori di luar cakupan tidak diperiksa, karena muncul sah di nama library (misalnya `hash` di
+   `java.util.HashMap`). `org.owasp.esapi` bukan pelanggaran: itu library sanitasi sungguhan yang harus tetap
+   terlihat oleh model. Jika ditemukan, laporkan file, baris, dan potongan kodenya, lalu hentikan. Pengecualian
+   yang memang sah dicatat eksplisit di `allowed_matches` beserta alasannya, bukan diabaikan diam-diam.
 6. Tulis `data/name_mapping.csv`:
 
 ```

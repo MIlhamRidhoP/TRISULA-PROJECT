@@ -21,7 +21,7 @@ project:
 
 benchmark:
   repo: https://github.com/OWASP-Benchmark/BenchmarkJava.git
-  ref: master                    # ganti dengan hash commit saat run pertama, lalu kunci
+  ref: 8b67a88d73b2594570fc21150705283de884620b   # dikunci; ditulis di paper
   expected_results: expectedresults-1.2.csv
   testcode_dir: src/main/java/org/owasp/benchmark/testcode
   helpers_dir: src/main/java/org/owasp/benchmark/helpers
@@ -38,7 +38,8 @@ benchmark:
     testcode_package_to: com.example.webapp.cases
     # String yang dianggap sah meski cocok dengan pola terlarang. Isi hanya jika benar-benar perlu,
     # beserta alasannya.
-    allowed_matches: []
+    allowed_matches:
+      - X-XSS-Protection         # nama header HTTP standar, bukan petunjuk yang ditambahkan benchmark
 
 analysis:
   mode: sast                     # sast | dast | both. Hanya sast yang diimplementasikan.

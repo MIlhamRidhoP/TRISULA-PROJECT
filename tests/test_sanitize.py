@@ -9,7 +9,8 @@ from trisula.sanitize import (
     SanitizeError,
     _walk,
     assign_case_ids,
-    find_forbidden_strings,
+    find_leftover_strings,
+    replace_servlet_paths,
     run_sanitize,
     strip_comments,
 )
@@ -88,10 +89,71 @@ def test_case_numbers_are_shuffled_but_reproducible():
     assert sorted(m.number for m in first) == list(range(1, 21))
 
 
-def test_leftover_strings_are_reported_unless_allowed():
-    files = {"Case0001.java": 'response.setHeader("X-XSS-Protection", "0");\nnew java.util.HashMap<>();\n'}
-    hits = find_forbidden_strings(files, ["xss", "hash"], allowed=["X-XSS-Protection"])
-    assert hits == ["Case0001.java:2: hash"]
+CATEGORIES = ["cmdi", "hash", "sqli", "xss"]
+
+
+def test_dispatcher_path_loses_category_segment():
+    source = (
+        'class A {\n    void f() {\n        r.getRequestDispatcher("/sqli-02/Case0001.html");\n    }\n}\n'
+    )
+    sanitized = replace_servlet_paths(source, "/case/0001", "/case/", CATEGORIES)
+    assert 'r.getRequestDispatcher("/case/Case0001.html");' in sanitized
+
+
+def test_servlet_annotation_is_replaced_whole_and_other_literals_untouched():
+    source = '@WebServlet(value = "/xss-01/Case0002")\nclass B {\n    String s = "a/sqli-like/b";\n}\n'
+    sanitized = replace_servlet_paths(source, "/case/0002", "/case/", CATEGORIES)
+    assert '@WebServlet(value = "/case/0002")' in sanitized
+    assert '"a/sqli-like/b"' in sanitized
+
+
+def leftovers(code: str, allowed: list[str] | None = None) -> list[str]:
+    return find_leftover_strings({"Case0001.java": code}, ["sqli", "xss"], allowed or [])
+
+
+def test_library_names_are_not_leftovers():
+    code = (
+        "class A {\n"
+        "    java.util.HashMap<String, String> m = new java.util.HashMap<>();\n"
+        "    String e = org.owasp.esapi.ESAPI.encoder().encodeForHTML(p);\n"
+        '    String h = crypto.hashCode() + "";\n'
+        "}\n"
+    )
+    assert leftovers(code) == []
+
+
+def test_in_scope_category_in_string_literal_is_reported_unless_allowed():
+    code = 'class A {\n    void f() {\n        r.setHeader("X-XSS-Protection", "0");\n    }\n}\n'
+    assert leftovers(code) == ['Case0001.java:3: xss | r.setHeader("X-XSS-Protection", "0");']
+    assert leftovers(code, allowed=["X-XSS-Protection"]) == []
+
+
+def test_category_as_identifier_outside_literals_is_not_reported():
+    assert leftovers("class A {\n    int xssCount = 0;\n}\n") == []
+
+
+def test_category_as_package_segment_is_reported():
+    assert leftovers("import com.example.sqli.Helper;\nclass A {}\n") == [
+        "Case0001.java:1: sqli | import com.example.sqli.Helper;"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("line", "pattern"),
+    [
+        ("String s = BenchmarkTest00001.class.getName();", "benchmarktest"),
+        ("import org.owasp.benchmark.helpers.Utils;", "owasp.benchmark"),
+        ('String p = "src/org/owasp/benchmark/x";', "org/owasp/benchmark"),
+        ('String p = "/benchmark/index.html";', "benchmark"),
+    ],
+)
+def test_benchmark_identifiers_are_reported(line, pattern):
+    hits = leftovers(f"class A {{\n    {line}\n}}\n")
+    assert any(f": {pattern} |" in hit for hit in hits)
+
+
+def test_benchmark_inside_longer_identifier_is_not_reported():
+    assert leftovers("class A {\n    int benchmarking = 1;\n}\n") == []
 
 
 def test_leftover_strings_stop_sanitize_and_leave_target_untouched(tmp_path):

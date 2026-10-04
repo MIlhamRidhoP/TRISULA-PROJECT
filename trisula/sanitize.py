@@ -18,7 +18,13 @@ log = logging.getLogger(__name__)
 JAVA_PARSER = Parser(Language(tree_sitter_java.language()))
 COMMENT_NODE_TYPES = {"line_comment", "block_comment"}
 ORIGINAL_NAME_PATTERN = re.compile(r"BenchmarkTest\d{5}")
-FORBIDDEN_TERMS = ("benchmarktest", "owasp", "benchmark")
+# Aturan 5 DATASET.md: pola yang selalu diperiksa di seluruh kode test case.
+LEFTOVER_PATTERNS = {
+    "benchmarktest": re.compile(r"benchmarktest", re.IGNORECASE),
+    "owasp.benchmark": re.compile(r"owasp\.benchmark", re.IGNORECASE),
+    "org/owasp/benchmark": re.compile(r"org/owasp/benchmark", re.IGNORECASE),
+    "benchmark": re.compile(r"(?<![A-Za-z0-9_])benchmark(?![A-Za-z0-9_])", re.IGNORECASE),
+}
 
 
 class SanitizeError(TrisulaError):
@@ -79,17 +85,33 @@ def strip_comments(source: str) -> str:
     return _tidy_blank_lines(_replace_ranges(encoded, edits).decode("utf-8"))
 
 
-def replace_servlet_paths(source: str, servlet_path: str) -> str:
+def category_segment_pattern(categories: list[str]) -> re.Pattern[str]:
+    alternatives = "|".join(re.escape(category) for category in sorted(categories, key=len, reverse=True))
+    return re.compile(rf"/(?:{alternatives})-\d+/")
+
+
+def replace_servlet_paths(source: str, servlet_path: str, path_prefix: str, categories: list[str]) -> str:
+    """Aturan 3: literal di @WebServlet diganti utuh dengan path netral. Di string literal lain, segmen
+    /<kategori>-NN/ diganti path_prefix, misalnya "/sqli-02/a.html" menjadi "/case/a.html"."""
     encoded = source.encode("utf-8")
     tree = JAVA_PARSER.parse(encoded)
+    segment = category_segment_pattern(categories)
     edits = []
+    servlet_literals = set()
     for node in _walk(tree.root_node):
         if node.type != "annotation" or node.child_by_field_name("name").text != b"WebServlet":
             continue
-        arguments = node.child_by_field_name("arguments")
-        for literal in _walk(arguments):
+        for literal in _walk(node.child_by_field_name("arguments")):
             if literal.type == "string_literal":
+                servlet_literals.add((literal.start_byte, literal.end_byte))
                 edits.append((literal.start_byte, literal.end_byte, f'"{servlet_path}"'.encode()))
+    for literal in _walk(tree.root_node):
+        if literal.type != "string_literal" or (literal.start_byte, literal.end_byte) in servlet_literals:
+            continue
+        text = literal.text.decode("utf-8")
+        replaced = segment.sub(path_prefix, text)
+        if replaced != text:
+            edits.append((literal.start_byte, literal.end_byte, replaced.encode("utf-8")))
     return _replace_ranges(encoded, edits).decode("utf-8")
 
 
@@ -118,25 +140,46 @@ def rename_packages(text: str, renames: list[tuple[str, str]]) -> str:
     return text
 
 
-def find_forbidden_strings(files: dict[str, str], terms: list[str], allowed: list[str]) -> list[str]:
-    allowed_patterns = [re.compile(re.escape(match), re.IGNORECASE) for match in allowed]
-    hits = []
+def _without_allowed(text: str, allowed: list[re.Pattern[str]]) -> str:
+    for pattern in allowed:
+        text = pattern.sub("", text)
+    return text
+
+
+def find_leftover_strings(
+    files: dict[str, str], categories: list[str], allowed_matches: list[str]
+) -> list[str]:
+    """Aturan 5 DATASET.md. Nama kategori dalam cakupan hanya dicari di string literal dan di segmen path,
+    karena nama kategori lain (misalnya `hash`) muncul sah di nama library seperti java.util.HashMap."""
+    allowed = [re.compile(re.escape(match), re.IGNORECASE) for match in allowed_matches]
+    path_segments = {c: re.compile(rf"(?<=[/.]){re.escape(c)}(?=[/.])", re.IGNORECASE) for c in categories}
+    hits = set()
     for path, text in sorted(files.items()):
-        for number, line in enumerate(text.splitlines(), start=1):
-            checked = line
-            for pattern in allowed_patterns:
-                checked = pattern.sub("", checked)
-            lowered = checked.lower()
-            hits.extend(f"{path}:{number}: {term}" for term in terms if term in lowered)
-    return hits
+        lines = text.splitlines()
+        for number, line in enumerate(lines, start=1):
+            checked = _without_allowed(line, allowed)
+            hits.update((path, number, name) for name, p in LEFTOVER_PATTERNS.items() if p.search(checked))
+            hits.update((path, number, c) for c, p in path_segments.items() if p.search(checked))
+        tree = JAVA_PARSER.parse(text.encode("utf-8"))
+        for literal in (n for n in _walk(tree.root_node) if n.type == "string_literal"):
+            content = _without_allowed(literal.text.decode("utf-8"), allowed).lower()
+            number = literal.start_point[0] + 1
+            hits.update((path, number, c) for c in categories if c.lower() in content)
+    return [
+        f"{path}:{number}: {name} | {files[path].splitlines()[number - 1].strip()}"
+        for path, number, name in sorted(hits)
+    ]
 
 
-def sanitize_case(source: str, mapping: dict[str, NameMapping], number: int, settings: SanitizeConfig) -> str:
+def sanitize_case(
+    source: str, mapping: dict[str, NameMapping], number: int, settings: SanitizeConfig, categories: list[str]
+) -> str:
     text = strip_comments(source)
     text = ORIGINAL_NAME_PATTERN.sub(
         lambda match: mapping[match.group(0)].case_id if match.group(0) in mapping else match.group(0), text
     )
-    return replace_servlet_paths(text, f"{settings.servlet_path_prefix}{number:04d}")
+    servlet_path = f"{settings.servlet_path_prefix}{number:04d}"
+    return replace_servlet_paths(text, servlet_path, settings.servlet_path_prefix, categories)
 
 
 def _move_package_dir(java_root: Path, old_package: str, new_package: str) -> None:
@@ -184,10 +227,12 @@ def run_sanitize(config: Config) -> list[NameMapping]:
     new_testcode_package = rename_packages(testcode_package, renames)
     new_testcode_dir = target / JAVA_SOURCE_ROOT / new_testcode_package.replace(".", "/")
 
+    meta = json.loads((config.data_dir / "sample_meta.json").read_text(encoding="utf-8"))
     sanitized_cases = {}
     for mapping in mappings:
         source = (testcode_dir / f"{mapping.original_name}.java").read_text(encoding="utf-8")
-        text = rename_packages(sanitize_case(source, by_name, mapping.number, settings), renames)
+        sanitized = sanitize_case(source, by_name, mapping.number, settings, meta["all_categories"])
+        text = rename_packages(sanitized, renames)
         sanitized_cases[f"{mapping.case_id}.java"] = text
 
     broken = [
@@ -196,11 +241,10 @@ def run_sanitize(config: Config) -> list[NameMapping]:
     if broken:
         raise SanitizeError(f"sanitized files do not parse cleanly: {broken[:10]}")
 
-    meta = json.loads((config.data_dir / "sample_meta.json").read_text(encoding="utf-8"))
-    terms = sorted({*FORBIDDEN_TERMS, *meta["all_categories"]})
-    hits = find_forbidden_strings(sanitized_cases, terms, settings.allowed_matches)
+    in_scope = list(config.cwe_by_category)
+    hits = find_leftover_strings(sanitized_cases, in_scope, settings.allowed_matches)
     if hits:
-        for hit in hits[:50]:
+        for hit in hits:
             log.error("leftover string %s", hit)
         raise SanitizeError(
             f"{len(hits)} leftover identifying strings in sanitized cases; "
