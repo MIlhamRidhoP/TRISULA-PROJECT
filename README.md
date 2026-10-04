@@ -2,25 +2,25 @@
 
 [![ci](https://github.com/MIlhamRidhoP/TRISULA-PROJECT/actions/workflows/ci.yml/badge.svg)](https://github.com/MIlhamRidhoP/TRISULA-PROJECT/actions/workflows/ci.yml)
 
-TRISULA runs CodeQL in GitHub Actions, asks three LLMs (Gemini, GPT, Grok) to review each file with and without the
-CodeQL findings, and combines their verdicts. It also measures the result against OWASP Benchmark ground truth for
-SQL injection (CWE-89) and cross-site scripting (CWE-79), so the effect of the LLM layer can be quantified.
+TRISULA menjalankan CodeQL di GitHub Actions, meminta tiga LLM (Gemini, GPT, Grok) meninjau setiap file dengan dan
+tanpa temuan CodeQL, lalu menggabungkan putusannya. Hasilnya diukur terhadap ground truth OWASP Benchmark untuk
+SQL injection (CWE-89) dan cross-site scripting (CWE-79), sehingga pengaruh lapisan LLM bisa dihitung.
 
-The framework only reads code and reports. It never modifies the target.
+Framework ini hanya membaca kode dan melapor. Kode target tidak pernah diubah.
 
-## How it works
+## Cara kerja
 
 ```mermaid
 flowchart LR
-    subgraph prepare[prefilter job]
+    subgraph prepare[job prefilter]
         S[sample] --> Z[sanitize] --> P[prefilter + Gitleaks]
     end
-    subgraph scan[codeql job]
+    subgraph scan[job codeql]
         Q[CodeQL analyze] --> R[parse-sarif]
     end
-    subgraph llm[review job, matrix model x scenario]
-        B[scenario B: code + CodeQL findings]
-        C[scenario C: code only]
+    subgraph llm[job review, matrix model x skenario]
+        B[skenario B: kode + temuan CodeQL]
+        C[skenario C: kode saja]
     end
     P --> Q
     R --> B
@@ -28,26 +28,27 @@ flowchart LR
     B --> E[ensemble]
     C --> E
     R --> E
-    E --> V[evaluate] --> O[report: HTML, SARIF per model, PR comment, figures]
+    E --> V[evaluate] --> O[report: HTML, SARIF per model, komentar PR, grafik]
 ```
 
-| Scenario | LLM input | Runs | Purpose |
+| Skenario | Masukan ke LLM | Run | Tujuan |
 |---|---|---|---|
-| `A` | none | 1 | CodeQL baseline |
-| `B-<model>` | code and CodeQL findings for the file | 3 | LLM gives the final verdict |
-| `C-<model>` | code only | 1 | Measures how much the CodeQL hints help |
-| `ENS` | no new calls | derived | Majority vote of `B-*` run 1 |
+| `A` | tidak ada | 1 | Baseline CodeQL |
+| `B-<model>` | kode dan temuan CodeQL untuk file itu | 3 | LLM memberi putusan akhir |
+| `C-<model>` | kode saja | 1 | Mengukur seberapa besar bantuan petunjuk CodeQL |
+| `ENS` | tidak ada panggilan baru | turunan | Voting mayoritas dari `B-*` run 1 |
 
-When an LLM call fails after retries, scenario B falls back to the CodeQL verdict and scenario C counts the case as
-not vulnerable. Every call is cached by a hash of the model, prompt version, rendered prompt, run number, and call
-parameters, and logged as one JSON line with tokens, latency, cost, and the raw response.
+Jika panggilan LLM tetap gagal setelah retry, skenario B memakai putusan CodeQL dan skenario C menghitung kasus itu
+sebagai tidak rentan. Setiap panggilan di-cache berdasarkan hash dari model, versi prompt, prompt yang sudah
+dirender, nomor run, dan parameter pemanggilan, lalu dicatat sebagai satu baris JSON berisi token, latensi, biaya,
+dan respons mentah.
 
-The full rules for metrics, matching, and error handling are in [docs/DESIGN.md](docs/DESIGN.md). Dataset sampling
-and sanitization are in [docs/DATASET.md](docs/DATASET.md).
+Aturan lengkap untuk metrik, pencocokan temuan, dan penanganan error ada di [docs/DESIGN.md](docs/DESIGN.md).
+Sampling dan sanitasi dataset ada di [docs/DATASET.md](docs/DATASET.md).
 
-## Installation
+## Instalasi
 
-Requires Python 3.12.
+Membutuhkan Python 3.12.
 
 ```bash
 git clone https://github.com/MIlhamRidhoP/TRISULA-PROJECT.git
@@ -57,15 +58,15 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Run the demo
+## Menjalankan demo
 
 ```bash
 python -m trisula demo
 ```
 
-The demo needs no network access and no API key. It uses a small hand-written project in `demo/benchmark_mini`
-(shaped like OWASP Benchmark, 12 sampled cases), a hand-written CodeQL SARIF file, and three copies of a
-deterministic mock model. It runs every stage in a few seconds and writes to `.cache/demo/results/`:
+Demo tidak butuh akses jaringan maupun API key. Demo memakai proyek kecil buatan sendiri di `demo/benchmark_mini`
+(meniru bentuk OWASP Benchmark, 12 kasus tersampel), file SARIF CodeQL buatan tangan, dan tiga salinan model mock
+yang deterministik. Semua tahap selesai dalam beberapa detik, hasilnya ditulis ke `.cache/demo/results/`:
 
 ```
 INFO trisula.evaluate: evaluated 8 scenarios on 12 cases, best pooled score A=0.500 -> .cache/demo/results/summary.json
@@ -73,12 +74,12 @@ INFO trisula.report.build: wrote 9 report files (15 findings for developers) -> 
 INFO trisula.demo: demo finished -> .cache/demo/results/report.html
 ```
 
-A copy of the resulting report is in [docs/example-report.html](docs/example-report.html). The mock verdicts are
-derived from file name hashes, so the numbers say nothing about real models.
+Salinan laporan hasil demo ada di [docs/example-report.html](docs/example-report.html). Putusan mock berasal dari
+hash nama file, jadi angkanya tidak menggambarkan kinerja model sungguhan.
 
-## Run with real models
+## Menjalankan dengan model sungguhan
 
-1. Set the API keys as environment variables. Never commit them; `.env.example` lists the names.
+1. Isi API key sebagai environment variable. Jangan pernah di-commit; nama variabelnya ada di `.env.example`.
 
    ```bash
    export GEMINI_API_KEY=...
@@ -86,10 +87,10 @@ derived from file name hashes, so the numbers say nothing about real models.
    export XAI_API_KEY=...
    ```
 
-2. Prepare the target and CodeQL results. Sampling clones BenchmarkJava at the locked commit in `benchmark.ref`
-   into `.cache/benchmark/` and writes the trimmed project to `targets/` (not committed). The committed `data/`
-   folder only holds metadata from that step: case names, labels, and the mapping to neutral names. It contains no
-   benchmark code.
+2. Siapkan target dan hasil CodeQL. Tahap sampling meng-clone BenchmarkJava pada commit yang dikunci di
+   `benchmark.ref` ke `.cache/benchmark/`, lalu menulis proyek hasil pangkas ke `targets/` (tidak di-commit).
+   Folder `data/` yang di-commit hanya berisi metadata dari tahap ini: nama test case, label, dan pemetaan ke nama
+   netral. Tidak ada kode benchmark di dalamnya.
 
    ```bash
    python -m trisula sample
@@ -98,116 +99,119 @@ derived from file name hashes, so the numbers say nothing about real models.
    python -m trisula parse-sarif --sarif path/to/java.sarif --timing path/to/timing.json
    ```
 
-   CodeQL itself runs in the `codeql` job of `.github/workflows/trisula.yml`. Locally you can pass a SARIF file
-   produced by the CodeQL CLI.
+   CodeQL sendiri berjalan di job `codeql` pada `.github/workflows/trisula.yml`. Di lokal, gunakan file SARIF hasil
+   CodeQL CLI.
 
-3. Start with a small trial and check the call log before a full run:
+3. Mulai dengan uji coba kecil dan periksa log panggilan sebelum run penuh:
 
    ```bash
    python -m trisula review --model gpt --scenario B --run 1 --limit 3
    ```
 
-   Look at `results/raw/calls-B-gpt-run1.jsonl`: model ID, the reasoning setting that was sent, token counts, cost,
-   and whether the JSON passed validation without retries.
+   Buka `results/raw/calls-B-gpt-run1.jsonl` dan periksa model ID, tingkat reasoning yang benar-benar dikirim,
+   jumlah token, biaya, dan apakah JSON lolos validasi tanpa retry.
 
-4. Full run, then aggregate:
+4. Run penuh, lalu agregasi:
 
    ```bash
-   python -m trisula review --model gemini --scenario B     # all configured runs
+   python -m trisula review --model gemini --scenario B     # semua run yang dikonfigurasi
    python -m trisula review --model gemini --scenario C
-   # repeat for gpt and grok
+   # ulangi untuk gpt dan grok
    python -m trisula ensemble
    python -m trisula evaluate
    python -m trisula report
    ```
 
-### In GitHub Actions
+### Di GitHub Actions
 
-Add `GEMINI_API_KEY`, `OPENAI_API_KEY`, and `XAI_API_KEY` under Settings > Secrets and variables > Actions. The
-`trisula` workflow runs on push to `main`, on pull requests from the same repository, and manually through
-`workflow_dispatch` with optional `limit`, `models`, and `scenarios` inputs. Pull requests from forks only run the
-prefilter and CodeQL jobs, so secrets are never exposed to fork code. Each review job receives only its own model's
-key.
+Tambahkan `GEMINI_API_KEY`, `OPENAI_API_KEY`, dan `XAI_API_KEY` di Settings > Secrets and variables > Actions.
+Workflow `trisula` berjalan saat push ke `main`, saat pull request dari repositori yang sama, dan secara manual
+lewat `workflow_dispatch` dengan input opsional `limit`, `models`, dan `scenarios`. Pull request dari fork hanya
+menjalankan job prefilter dan CodeQL, jadi secret tidak pernah terpapar ke kode dari fork. Setiap job review hanya
+menerima kunci milik modelnya sendiri. Dengan `models=mock`, seluruh pipeline bisa dijalankan tanpa secret.
 
-## Configuration
+## Konfigurasi
 
-All research values live in [config/trisula.yml](config/trisula.yml): models and prices, number of runs, sample
-size and seed, CWEs in scope, reasoning level, retry limits, ensemble threshold, and report settings. The code reads
-them from there; nothing is hard-coded. Notable keys:
+Semua nilai penelitian ada di [config/trisula.yml](config/trisula.yml): model dan harga, jumlah run, ukuran dan
+seed sampel, CWE dalam cakupan, tingkat reasoning, batas retry, ambang ensemble, dan pengaturan laporan. Kode
+membaca nilai dari sana; tidak ada yang ditulis langsung di kode. Kunci yang penting:
 
-| Key | Meaning |
+| Kunci | Arti |
 |---|---|
-| `project.source_paths` | What CodeQL analyzes |
-| `project.llm_paths` | What may be sent to an LLM, after the prefilter |
-| `benchmark.ref` | BenchmarkJava commit used for the experiment (locked) |
-| `llm.models.<key>` | Provider, model ID, key variable, reasoning level, prices |
-| `llm.scenarios` | Runs per scenario and whether CodeQL hints are included |
-| `ensemble.min_votes` | Votes needed for the ensemble to call a case vulnerable |
-| `prefilter.pii_mode` | `warn` or `exclude` files with e-mail, phone, or 16-digit numbers |
+| `project.source_paths` | Yang dianalisis CodeQL |
+| `project.llm_paths` | Yang boleh dikirim ke LLM, setelah lolos prefilter |
+| `benchmark.ref` | Commit BenchmarkJava untuk eksperimen (dikunci) |
+| `llm.models.<kunci>` | Provider, model ID, variabel kunci, tingkat reasoning, harga |
+| `llm.scenarios` | Jumlah run per skenario dan apakah petunjuk CodeQL disertakan |
+| `ensemble.min_votes` | Jumlah suara agar ensemble menyatakan kasus rentan |
+| `prefilter.pii_mode` | `warn` atau `exclude` untuk file berisi email, nomor telepon, atau deret 16 digit |
 
-The prompt template is [prompts/sast_review.md](prompts/sast_review.md). Its version must match
-`llm.prompt_version`, and the version is part of the cache key.
+Template prompt ada di [prompts/sast_review.md](prompts/sast_review.md). Versinya harus sama dengan
+`llm.prompt_version`, dan versi itu menjadi bagian dari kunci cache.
 
-To analyze another project, point `project.*` at it and drop the `benchmark` section; `sample` and `sanitize` are
-only for OWASP Benchmark.
+Untuk menganalisis proyek lain, arahkan `project.*` ke proyek tersebut dan hapus bagian `benchmark`; `sample` dan
+`sanitize` hanya untuk OWASP Benchmark.
 
-## Outputs
+## Keluaran
 
-| Path | Content |
+| Path | Isi |
 |---|---|
-| `results/prefilter.json` | Files allowed to reach an LLM, and excluded files with reason and line, never the value |
-| `results/codeql/alerts.json` | In-scope CodeQL alerts with data-flow steps |
-| `results/verdicts/<scenario>-<model>-run<N>.jsonl` | Per-file outcome of each review run |
-| `results/raw/calls-*.jsonl` | One line per API attempt |
-| `results/findings.jsonl` | Normalized findings for all scenarios |
-| `results/summary.csv`, `summary.json`, `per_case.csv` | Metrics, consistency, cost, McNemar tests |
-| `results/report.html` | Evaluation tables, figures, and a filterable developer view |
-| `results/sarif/trisula-<model>.sarif` | SARIF 2.1.0 per model for GitHub Code Scanning |
-| `results/pr_comment.md` | Pull request summary |
-| `results/figures/*.pdf` | Paper figures, IEEE single-column width, readable in grayscale |
+| `results/prefilter.json` | File yang boleh dikirim ke LLM, dan file yang dikeluarkan beserta alasan dan barisnya, tanpa nilai |
+| `results/codeql/alerts.json` | Alert CodeQL dalam cakupan beserta langkah aliran data |
+| `results/verdicts/<skenario>-<model>-run<N>.jsonl` | Hasil per file untuk setiap run review |
+| `results/raw/calls-*.jsonl` | Satu baris per percobaan panggilan API |
+| `results/findings.jsonl` | Temuan ternormalisasi untuk semua skenario |
+| `results/summary.csv`, `summary.json`, `per_case.csv` | Metrik, konsistensi, biaya, uji McNemar |
+| `results/report.html` | Tabel evaluasi, grafik, dan tampilan developer yang bisa difilter |
+| `results/sarif/trisula-<model>.sarif` | SARIF 2.1.0 per model untuk GitHub Code Scanning |
+| `results/pr_comment.md` | Ringkasan untuk komentar pull request |
+| `results/figures/*.pdf` | Grafik paper, lebar satu kolom IEEE, tetap terbaca dalam hitam putih |
 
-## Project layout
+## Struktur proyek
 
 ```
-config/trisula.yml        research configuration
-prompts/sast_review.md    prompt template (research instrument)
-docs/                     design, dataset, and provider notes
-demo/                     offline demo project and CodeQL SARIF
-trisula/                  the framework
-  sampling.py sanitize.py   OWASP Benchmark preparation
-  prefilter.py              file selection before any LLM call
-  codeql.py                 SARIF parsing
-  llm/                      prompt rendering, call path, adapters (Gemini, OpenAI-compatible, mock)
-  review.py                 review orchestration
-  normalize.py ensemble.py  findings and voting
-  evaluate.py stats.py      metrics and McNemar tests
-  report/                   SARIF, PR comment, HTML, figures
-tests/                    pytest suite
-.github/workflows/        trisula.yml (pipeline), ci.yml (lint and tests)
+config/trisula.yml        konfigurasi penelitian
+prompts/sast_review.md    template prompt (instrumen penelitian)
+docs/                     catatan desain, dataset, dan provider
+demo/                     proyek demo offline dan SARIF CodeQL
+data/                     metadata sampel dan pemetaan nama (tanpa kode benchmark)
+trisula/                  framework
+  sampling.py sanitize.py   persiapan OWASP Benchmark
+  prefilter.py              seleksi file sebelum panggilan LLM
+  codeql.py                 parser SARIF
+  llm/                      render prompt, jalur pemanggilan, adaptor (Gemini, kompatibel OpenAI, mock)
+  review.py                 orkestrasi review
+  normalize.py ensemble.py  temuan dan voting
+  evaluate.py stats.py      metrik dan uji McNemar
+  report/                   SARIF, komentar PR, HTML, grafik
+tests/                    tes pytest
+.github/workflows/        trisula.yml (pipeline), ci.yml (lint dan tes)
 ```
 
-## Development
+## Pengembangan
 
 ```bash
 pytest -q
 ruff check . && ruff format --check .
 ```
 
-## Limitations
+## Keterbatasan
 
-- The LLM sees one file at a time. Some OWASP Benchmark cases are safe or unsafe because of helper classes that
-  are not sent.
-- OWASP Benchmark is public and may be in the models' training data. Sanitization removes names, comments, and
-  servlet paths, but cannot remove memorization entirely.
-- The benchmark cases are short and synthetic. Results on real applications can differ.
-- Reasoning levels with the same name are not equivalent across providers.
-- Costs are computed from list prices in the configuration, not from invoices.
-- Model versions can change on the provider side. Model IDs and raw responses are logged for this reason.
+- LLM hanya melihat satu file dalam satu waktu. Sebagian kasus OWASP Benchmark aman atau rentan karena kelas helper
+  yang tidak ikut dikirim.
+- OWASP Benchmark bersifat publik dan mungkin ada di data pelatihan model. Sanitasi menghapus nama, komentar, dan
+  path servlet, tapi tidak bisa menghilangkan hafalan sepenuhnya.
+- Header `X-XSS-Protection` hanya muncul di kasus xss dan sengaja dibiarkan karena merupakan header HTTP standar,
+  sehingga tetap menjadi petunjuk kategori bagi model.
+- Test case benchmark pendek dan sintetis. Hasil pada aplikasi nyata bisa berbeda.
+- Tingkat reasoning dengan nama yang sama tidak setara antar-provider.
+- Biaya dihitung dari harga daftar di konfigurasi, bukan dari tagihan.
+- Versi model bisa berubah di sisi provider. Karena itu model ID dan respons mentah selalu dicatat.
 
-## License
+## Lisensi
 
-The framework code is released under the [MIT License](LICENSE).
+Kode framework dirilis dengan [Lisensi MIT](LICENSE).
 
-OWASP Benchmark is licensed under GPL-2.0. It is not distributed in this repository; `python -m trisula sample`
-downloads it from the official repository at run time. The project in `demo/benchmark_mini` is a small set of
-hand-written files that only imitate the Benchmark layout.
+OWASP Benchmark berlisensi GPL-2.0 dan tidak didistribusikan di repositori ini; `python -m trisula sample`
+mengunduhnya dari repositori resmi saat dijalankan. Proyek di `demo/benchmark_mini` adalah sekumpulan kecil file
+buatan sendiri yang hanya meniru struktur Benchmark.
