@@ -1,0 +1,68 @@
+{
+  "benchmark_repo": "https://github.com/OWASP-Benchmark/BenchmarkJava.git",
+  "benchmark_ref": "8b67a88d73b2594570fc21150705283de884620b",
+  "benchmark_commit": "8b67a88d73b2594570fc21150705283de884620b",
+  "seed": 42,
+  "candidates": {
+    "sqli": {
+      "vulnerable": 272,
+      "safe": 232
+    },
+    "xss": {
+      "vulnerable": 246,
+      "safe": 209
+    }
+  },
+  "all_categories": [
+    "cmdi",
+    "crypto",
+    "hash",
+    "ldapi",
+    "pathtraver",
+    "securecookie",
+    "sqli",
+    "trustbound",
+    "weakrand",
+    "xpathi",
+    "xss"
+  ],
+  "dropped_paths": [
+    ".devcontainer",
+    ".gitattributes",
+    ".github",
+    ".gitignore",
+    ".keystore",
+    ".mvn",
+    ".travis.yml",
+    "DevStyleHtml.prefs",
+    "DevStyleXml.prefs",
+    "LICENSE",
+    "OWASP Benchmark.URL",
+    "README.md",
+    "VMs",
+    "createAnonScorecards.sh",
+    "createScorecards.bat",
+    "createScorecards.sh",
+    "data",
+    "expectedresults-1.2.csv",
+    "results",
+    "runBenchmark.bat",
+    "runBenchmark.sh",
+    "runCrawler.bat",
+    "runCrawler.sh",
+    "runRemoteAccessibleBenchmark.bat",
+    "runRemoteAccessibleBenchmark.sh",
+    "scorecard",
+    "scripts",
+    "src/config/build.xml",
+    "src/config/local",
+    "src/config/note.xml",
+    "src/config/remote",
+    "src/config/web.xml",
+    "src/main/resources",
+    "src/main/webapp",
+    "src/site/resources",
+    "src/site/site.xml",
+    "tools"
+  ]
+}

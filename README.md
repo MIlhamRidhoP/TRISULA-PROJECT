@@ -86,7 +86,10 @@ derived from file name hashes, so the numbers say nothing about real models.
    export XAI_API_KEY=...
    ```
 
-2. Prepare the target and CodeQL results. Sampling clones BenchmarkJava at `benchmark.ref` into `.cache/benchmark/`.
+2. Prepare the target and CodeQL results. Sampling clones BenchmarkJava at the locked commit in `benchmark.ref`
+   into `.cache/benchmark/` and writes the trimmed project to `targets/` (not committed). The committed `data/`
+   folder only holds metadata from that step: case names, labels, and the mapping to neutral names. It contains no
+   benchmark code.
 
    ```bash
    python -m trisula sample
@@ -136,7 +139,7 @@ them from there; nothing is hard-coded. Notable keys:
 |---|---|
 | `project.source_paths` | What CodeQL analyzes |
 | `project.llm_paths` | What may be sent to an LLM, after the prefilter |
-| `benchmark.ref` | BenchmarkJava commit; lock it before the experiment |
+| `benchmark.ref` | BenchmarkJava commit used for the experiment (locked) |
 | `llm.models.<key>` | Provider, model ID, key variable, reasoning level, prices |
 | `llm.scenarios` | Runs per scenario and whether CodeQL hints are included |
 | `ensemble.min_votes` | Votes needed for the ensemble to call a case vulnerable |
