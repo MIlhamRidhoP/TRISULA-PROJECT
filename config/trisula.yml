@@ -1,0 +1,144 @@
+# Konfigurasi TRISULA untuk eksperimen paper (OWASP Benchmark).
+# Semua nilai desain penelitian ada di sini. Kode tidak boleh menulis nilai ini secara langsung.
+# Penjelasan tiap nilai ada di docs/DESIGN.md dan docs/DATASET.md.
+
+project:
+  name: owasp-benchmark-subset
+  language: java                 # dipakai CodeQL dan prefilter
+  language_display: Java         # dipakai di prompt
+  source_paths:
+    - targets/benchmark/src/main/java
+  # Hanya file di sini yang dikirim ke LLM. Helper sengaja tidak termasuk (DESIGN.md bagian 13).
+  llm_paths:
+    - targets/benchmark/src/main/java/com/example/webapp/cases
+  exclude:
+    - "**/.env"
+    - "**/.env.*"
+    - "**/*.sql"
+    - "**/*.log"
+    - "**/seed/**"
+    - "**/test/**"
+
+benchmark:
+  repo: https://github.com/OWASP-Benchmark/BenchmarkJava.git
+  ref: master                    # ganti dengan hash commit saat run pertama, lalu kunci
+  expected_results: expectedresults-1.2.csv
+  testcode_dir: src/main/java/org/owasp/benchmark/testcode
+  helpers_dir: src/main/java/org/owasp/benchmark/helpers
+  sample:
+    per_category: 100
+    vulnerable_ratio: 0.5
+    seed: 42
+  sanitize:
+    class_prefix: Case
+    servlet_path_prefix: /case/
+    rename_package: true
+    package_from: org.owasp.benchmark
+    package_to: com.example.webapp
+    testcode_package_to: com.example.webapp.cases
+    # String yang dianggap sah meski cocok dengan pola terlarang. Isi hanya jika benar-benar perlu,
+    # beserta alasannya.
+    allowed_matches: []
+
+analysis:
+  mode: sast                     # sast | dast | both. Hanya sast yang diimplementasikan.
+  sast_tool: codeql
+  codeql:
+    query_suite: security-extended
+    build_mode: none             # alternatif: manual (mvn compile), lihat DATASET.md bagian 4
+
+cwes:
+  - id: CWE-89
+    name: SQL Injection
+    benchmark_category: sqli
+    description: >-
+      untrusted data is used to build a SQL query or command without parameterization
+      or correct escaping, so it can change the structure of the query.
+  - id: CWE-79
+    name: Cross-site Scripting
+    benchmark_category: xss
+    description: >-
+      untrusted data is written into an HTML response without encoding that is correct
+      for the output context, so it can be interpreted as markup or script by the browser.
+
+llm:
+  prompt_file: prompts/sast_review.md
+  prompt_version: "1.0"
+  scenarios:
+    B:
+      runs: 3
+      with_sast_hints: true
+    C:
+      runs: 1
+      with_sast_hints: false
+  primary_run: 1
+  max_network_retries: 4
+  max_format_retries: 2
+  max_output_tokens: 16000
+  request_timeout_seconds: 300
+  max_concurrent_requests: 4     # per model
+  models:
+    gemini:
+      provider: google
+      model_id: gemini-3.1-pro-preview
+      api_key_env: GEMINI_API_KEY
+      reasoning: medium          # [verifikasi] Pro mungkin hanya menerima low/high, lihat PROVIDERS.md
+      price_input_per_mtok: 2.00
+      price_output_per_mtok: 12.00
+    gpt:
+      provider: openai
+      model_id: gpt-5.3-codex
+      api_key_env: OPENAI_API_KEY
+      base_url: null
+      reasoning: medium
+      price_input_per_mtok: 1.75
+      price_output_per_mtok: 14.00
+    grok:
+      provider: openai
+      model_id: grok-4.7
+      api_key_env: XAI_API_KEY
+      base_url: https://api.x.ai/v1
+      reasoning: medium
+      price_input_per_mtok: 2.00
+      price_output_per_mtok: 6.00
+    mock:
+      provider: mock
+      model_id: mock-1
+      reasoning: none
+      price_input_per_mtok: 0.0
+      price_output_per_mtok: 0.0
+      invalid_response_rate: 0.05   # sebagian respons sengaja rusak untuk menguji retry
+
+  # Model yang dijalankan secara default. Bisa ditimpa lewat CLI atau input workflow_dispatch.
+  active_models: [gemini, gpt, grok]
+
+ensemble:
+  members: [gemini, gpt, grok]
+  run: 1
+  min_votes: 2
+
+evaluation:
+  alpha: 0.05
+  multiple_comparison: holm
+  mcnemar_exact_below: 25
+  sensitivity_majority_runs: true
+
+prefilter:
+  gitleaks: true
+  pii_mode: warn                 # warn | exclude
+
+report:
+  pr_comment: true
+  max_pr_findings: 10
+  sarif: true
+  html: true
+  figures:
+    format: pdf
+    width_inches: 3.5
+    font_size: 8
+
+paths:
+  cache: .cache
+  data: data
+  targets: targets
+  results: results
