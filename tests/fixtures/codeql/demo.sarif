@@ -1,0 +1,860 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "semanticVersion": "2.23.0",
+          "rules": []
+        },
+        "extensions": [
+          {
+            "name": "codeql/java-queries",
+            "semanticVersion": "1.8.0",
+            "rules": [
+              {
+                "id": "java/sql-injection",
+                "name": "java/sql-injection",
+                "shortDescription": {
+                  "text": "Query built from user-controlled sources"
+                },
+                "defaultConfiguration": {
+                  "level": "error"
+                },
+                "properties": {
+                  "tags": [
+                    "security",
+                    "external/cwe/cwe-089",
+                    "external/cwe/cwe-564"
+                  ],
+                  "precision": "high",
+                  "security-severity": "8.8"
+                }
+              },
+              {
+                "id": "java/xss",
+                "name": "java/xss",
+                "shortDescription": {
+                  "text": "Cross-site scripting"
+                },
+                "defaultConfiguration": {
+                  "level": "error"
+                },
+                "properties": {
+                  "tags": [
+                    "security",
+                    "external/cwe/cwe-079"
+                  ],
+                  "precision": "high",
+                  "security-severity": "8.8"
+                }
+              },
+              {
+                "id": "java/stack-trace-exposure",
+                "name": "java/stack-trace-exposure",
+                "shortDescription": {
+                  "text": "Information exposure through a stack trace"
+                },
+                "defaultConfiguration": {
+                  "level": "error"
+                },
+                "properties": {
+                  "tags": [
+                    "security",
+                    "external/cwe/cwe-209",
+                    "external/cwe/cwe-497"
+                  ],
+                  "precision": "high",
+                  "security-severity": "8.8"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "results": [
+        {
+          "ruleId": "java/sql-injection",
+          "rule": {
+            "id": "java/sql-injection",
+            "index": 0,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "This query depends on a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0008.java",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 41,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0008.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 27,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getCookies(...) : Cookie[]"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0008.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getValue(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0008.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "decode(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0008.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 37,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "... + ... : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0008.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 41,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "sql"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "java/sql-injection",
+          "rule": {
+            "id": "java/sql-injection",
+            "index": 0,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "This query depends on a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0006.java",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 33,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0006.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 26,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getParameter(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0006.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 30,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "... + ... : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0006.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 33,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "sql"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "java/sql-injection",
+          "rule": {
+            "id": "java/sql-injection",
+            "index": 0,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "This query depends on a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0007.java",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 44,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0007.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 27,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getCookies(...) : Cookie[]"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0007.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getValue(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0007.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "decode(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0007.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 39,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "... ? ... : ... : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0007.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 40,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "... + ... : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0007.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 44,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "sql"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "java/xss",
+          "rule": {
+            "id": "java/xss",
+            "index": 1,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "Cross-site scripting vulnerability due to a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0004.java",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 38,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0004.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 27,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getCookies(...) : Cookie[]"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0004.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getValue(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0004.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "decode(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0004.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 38,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "param"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "java/xss",
+          "rule": {
+            "id": "java/xss",
+            "index": 1,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "Cross-site scripting vulnerability due to a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0005.java",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0005.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 26,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getParameter(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0005.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "param"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "java/xss",
+          "rule": {
+            "id": "java/xss",
+            "index": 1,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "Cross-site scripting vulnerability due to a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0012.java",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 34,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0012.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 28,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getHeader(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0012.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 30,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "decode(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0012.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 34,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "param"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "java/xss",
+          "rule": {
+            "id": "java/xss",
+            "index": 1,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "Cross-site scripting vulnerability due to a [user-provided value](1)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0002.java",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 44,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0002.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 27,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getCookies(...) : Cookie[]"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0002.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "getValue(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0002.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 31,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "decode(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0002.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 39,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "valuesList : ArrayList [<element>] : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0002.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 42,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "get(...) : String"
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0002.java",
+                            "uriBaseId": "%SRCROOT%"
+                          },
+                          "region": {
+                            "startLine": 44,
+                            "startColumn": 9
+                          }
+                        },
+                        "message": {
+                          "text": "bar"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "java/stack-trace-exposure",
+          "rule": {
+            "id": "java/stack-trace-exposure",
+            "index": 2,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "message": {
+            "text": "[Error information](1) can be exposed to an external user."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "targets/benchmark/src/main/java/com/example/webapp/cases/Case0006.java",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 9
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

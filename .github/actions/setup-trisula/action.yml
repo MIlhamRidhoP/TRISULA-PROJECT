@@ -1,0 +1,11 @@
+name: Set up TRISULA
+description: Install Python and the framework dependencies.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v7
+      with:
+        python-version: "3.12"
+        cache: pip
+    - shell: bash
+      run: pip install -r requirements.txt

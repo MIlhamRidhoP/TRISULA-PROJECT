@@ -1,0 +1,127 @@
+name: trisula
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Review only the first N files (empty = all)
+        required: false
+        default: ""
+      models:
+        description: Comma-separated model keys (empty = llm.active_models)
+        required: false
+        default: ""
+      scenarios:
+        description: Comma-separated LLM scenarios
+        required: false
+        default: "B,C"
+
+# Eksperimen lewat workflow_dispatch punya grup sendiri supaya tidak dibatalkan oleh push.
+concurrency:
+  group: trisula-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || 'auto' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+permissions: {}
+
+jobs:
+  prefilter:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      language: ${{ steps.settings.outputs.language }}
+      build_mode: ${{ steps.settings.outputs.build_mode }}
+      codeql_config: ${{ steps.settings.outputs.codeql_config }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-trisula
+
+      - id: settings
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from trisula.config import load_config
+          config = load_config()
+          print(f"language={config.project.language}")
+          print(f"build_mode={config.analysis.codeql.build_mode}")
+          print("codeql_config<<CODEQL_CONFIG")
+          print("queries:")
+          print(f"  - uses: {config.analysis.codeql.query_suite}")
+          print("paths:")
+          for path in config.project.source_paths:
+              print(f"  - {path}")
+          print("CODEQL_CONFIG")
+          PY
+
+      - uses: actions/cache@v6
+        with:
+          path: .cache/benchmark
+          key: benchmark-${{ hashFiles('config/trisula.yml') }}
+          restore-keys: benchmark-
+      - run: python -m trisula sample
+      - run: python -m trisula sanitize
+
+      # DATASET.md bagian 4: proyek hasil pangkas harus tetap terkompilasi. Kegagalan dicatat, tidak menghentikan
+      # pipeline, karena CodeQL build-mode none tetap bisa berjalan.
+      - id: compile
+        continue-on-error: true
+        working-directory: targets/benchmark
+        run: mvn -q -B -DskipTests compile
+      - run: |
+          mkdir -p results
+          echo "{\"maven_compile\": \"${{ steps.compile.outcome }}\"}" > results/compile_status.json
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: target
+          path: |
+            targets/
+            data/
+            results/compile_status.json
+          if-no-files-found: error
+
+  codeql:
+    needs: prefilter
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-trisula
+      - uses: actions/download-artifact@v8
+        with:
+          name: target
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ needs.prefilter.outputs.language }}
+          build-mode: ${{ needs.prefilter.outputs.build_mode }}
+          config: ${{ needs.prefilter.outputs.codeql_config }}
+
+      - id: analyze_start
+        run: echo "epoch=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ needs.prefilter.outputs.language }}
+          output: results/codeql
+          # Token PR dari fork tidak boleh menulis ke Code Scanning.
+          upload: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'always' || 'never' }}
+      - env:
+          ANALYZE_START: ${{ steps.analyze_start.outputs.epoch }}
+        run: |
+          end=$(date +%s)
+          echo "{\"duration_seconds\": $((end - ANALYZE_START))}" > results/codeql/timing.json
+
+      - run: python -m trisula parse-sarif
+      - uses: actions/upload-artifact@v7
+        with:
+          name: codeql
+          path: results/codeql/
+          if-no-files-found: error

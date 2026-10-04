@@ -26,6 +26,15 @@ def _sanitize(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
+def _parse_sarif(args: argparse.Namespace, config: Config) -> int:
+    from trisula.codeql import run_parse_sarif
+
+    codeql_dir = config.results_dir / "codeql"
+    sarif_paths = args.sarif or sorted(codeql_dir.glob("*.sarif"))
+    run_parse_sarif(config, sarif_paths, args.timing or codeql_dir / "timing.json")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trisula", description="LLM review on top of CodeQL findings.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="path to trisula.yml")
@@ -39,7 +48,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sanitize.set_defaults(handler=_sanitize)
     commands.add_parser("prefilter", help="select files that may be sent to an LLM")
-    commands.add_parser("parse-sarif", help="convert CodeQL SARIF into findings")
+    parse_sarif = commands.add_parser("parse-sarif", help="convert CodeQL SARIF into findings")
+    parse_sarif.add_argument("--sarif", type=Path, nargs="*", help="default: <results>/codeql/*.sarif")
+    parse_sarif.add_argument("--timing", type=Path, help="default: <results>/codeql/timing.json")
+    parse_sarif.set_defaults(handler=_parse_sarif)
 
     review = commands.add_parser("review", help="ask one model to review the sampled files")
     review.add_argument("--model", required=True)
