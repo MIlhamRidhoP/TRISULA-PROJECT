@@ -35,6 +35,7 @@ jobs:
       language: ${{ steps.settings.outputs.language }}
       build_mode: ${{ steps.settings.outputs.build_mode }}
       codeql_config: ${{ steps.settings.outputs.codeql_config }}
+      review_matrix: ${{ steps.settings.outputs.review_matrix }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -42,10 +43,26 @@ jobs:
       - uses: ./.github/actions/setup-trisula
 
       - id: settings
+        env:
+          INPUT_MODELS: ${{ inputs.models }}
+          INPUT_SCENARIOS: ${{ inputs.scenarios }}
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
           from trisula.config import load_config
           config = load_config()
+          models = [m.strip() for m in os.environ["INPUT_MODELS"].split(",") if m.strip()] or config.llm.active_models
+          scenarios = [s.strip() for s in os.environ["INPUT_SCENARIOS"].split(",") if s.strip()] or list(config.llm.scenarios)
+          unknown = [m for m in models if m not in config.llm.models] + [s for s in scenarios if s not in config.llm.scenarios]
+          if unknown:
+              raise SystemExit(f"unknown models or scenarios: {unknown}")
+          include = [
+              {"model": m, "scenario": s, "key_env": config.llm.models[m].api_key_env or ""}
+              for m in models
+              for s in scenarios
+          ]
+          print(f"review_matrix={json.dumps({'include': include})}")
           print(f"language={config.project.language}")
           print(f"build_mode={config.analysis.codeql.build_mode}")
           print("codeql_config<<CODEQL_CONFIG")
@@ -125,3 +142,60 @@ jobs:
           name: codeql
           path: results/codeql/
           if-no-files-found: error
+
+  review:
+    needs: [prefilter, codeql]
+    # Job yang memakai secret tidak berjalan untuk PR dari fork.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prefilter.outputs.review_matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-trisula
+      - uses: actions/download-artifact@v8
+        with:
+          name: target
+      - uses: actions/download-artifact@v8
+        with:
+          name: codeql
+          path: results/codeql
+
+      - id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: .cache/llm/${{ matrix.model }}
+          key: llm-${{ matrix.model }}-${{ matrix.scenario }}-${{ github.run_id }}
+          restore-keys: |
+            llm-${{ matrix.model }}-${{ matrix.scenario }}-
+            llm-${{ matrix.model }}-
+
+      # Hanya kunci milik model di matrix ini yang diteruskan ke proses.
+      - env:
+          MODEL: ${{ matrix.model }}
+          SCENARIO: ${{ matrix.scenario }}
+          LIMIT: ${{ inputs.limit }}
+          GEMINI_API_KEY: ${{ matrix.key_env == 'GEMINI_API_KEY' && secrets.GEMINI_API_KEY || '' }}
+          OPENAI_API_KEY: ${{ matrix.key_env == 'OPENAI_API_KEY' && secrets.OPENAI_API_KEY || '' }}
+          XAI_API_KEY: ${{ matrix.key_env == 'XAI_API_KEY' && secrets.XAI_API_KEY || '' }}
+        run: python -m trisula review --model "$MODEL" --scenario "$SCENARIO" ${LIMIT:+--limit "$LIMIT"}
+
+      # Respons yang sudah dibayar tetap disimpan walau job gagal di tengah jalan.
+      - if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: .cache/llm/${{ matrix.model }}
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: review-${{ matrix.model }}-${{ matrix.scenario }}
+          path: |
+            results/verdicts/
+            results/raw/
+          if-no-files-found: warn
