@@ -4,13 +4,7 @@ import os
 import sys
 from pathlib import Path
 
-from trisula.config import (
-    DEFAULT_CONFIG_PATH,
-    Config,
-    UnsupportedModeError,
-    ensure_supported_mode,
-    load_config,
-)
+from trisula.config import DEFAULT_CONFIG_PATH, Config, TrisulaError, ensure_supported_mode, load_config
 
 
 def _not_implemented(args: argparse.Namespace, config: Config) -> int:
@@ -25,6 +19,13 @@ def _sample(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
+def _sanitize(args: argparse.Namespace, config: Config) -> int:
+    from trisula.sanitize import run_sanitize
+
+    run_sanitize(config)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trisula", description="LLM review on top of CodeQL findings.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="path to trisula.yml")
@@ -33,7 +34,10 @@ def build_parser() -> argparse.ArgumentParser:
     sample = commands.add_parser("sample", help="sample test cases from OWASP Benchmark")
     sample.add_argument("--source", type=Path, help="local BenchmarkJava checkout instead of cloning")
     sample.set_defaults(handler=_sample)
-    commands.add_parser("sanitize", help="remove comments and identifying names from sampled cases")
+    sanitize = commands.add_parser(
+        "sanitize", help="remove comments and identifying names from sampled cases"
+    )
+    sanitize.set_defaults(handler=_sanitize)
     commands.add_parser("prefilter", help="select files that may be sent to an LLM")
     commands.add_parser("parse-sarif", help="convert CodeQL SARIF into findings")
 
@@ -63,10 +67,10 @@ def main(argv: list[str] | None = None) -> int:
     config = load_config(args.config)
     try:
         ensure_supported_mode(config)
-    except UnsupportedModeError as exc:
+        return args.handler(args, config)
+    except TrisulaError as exc:
         logging.error("%s", exc)
-        return 2
-    return args.handler(args, config)
+        return 1
 
 
 if __name__ == "__main__":

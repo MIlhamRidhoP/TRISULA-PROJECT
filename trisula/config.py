@@ -222,7 +222,11 @@ class Config(StrictModel):
         return self.resolve(self.paths.targets)
 
 
-class UnsupportedModeError(Exception):
+class TrisulaError(Exception):
+    """Kesalahan yang sudah diperkirakan (input atau konfigurasi). CLI melaporkannya tanpa traceback."""
+
+
+class UnsupportedModeError(TrisulaError):
     pass
 
 

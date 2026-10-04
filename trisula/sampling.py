@@ -7,7 +7,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from trisula.config import BenchmarkConfig, Config, SampleConfig
+from trisula.config import BenchmarkConfig, Config, SampleConfig, TrisulaError
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ KEPT_ROOT_FILES = ("pom.xml",)
 JAVA_SOURCE_ROOT = Path("src/main/java")
 
 
-class SamplingError(Exception):
+class SamplingError(TrisulaError):
     pass
 
 
@@ -180,6 +180,7 @@ def run_sample(config: Config, source_dir: Path | None = None) -> list[ExpectedR
         "benchmark_commit": commit,
         "seed": benchmark.sample.seed,
         "candidates": count_candidates(expected, list(cwe_by_category)),
+        "all_categories": sorted({case.category for case in expected}),
         "dropped_paths": dropped,
     }
     (config.data_dir / "sample_meta.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")

@@ -73,5 +73,5 @@ def test_dast_mode_validates_but_cli_refuses_to_run(tmp_path: Path, caplog):
     config_path = tmp_path / "trisula.yml"
     config_path.write_text(yaml.safe_dump(raw), encoding="utf-8")
 
-    assert main(["--config", str(config_path), "evaluate"]) == 2
+    assert main(["--config", str(config_path), "evaluate"]) == 1
     assert "not implemented" in caplog.text
