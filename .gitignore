@@ -2,3 +2,16 @@ CLAUDE.md
 PLAN.md
 .claude/
 HANDOFF.md
+
+targets/
+results/raw/
+.cache/
+.env
+.env.*
+!.env.example
+
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/

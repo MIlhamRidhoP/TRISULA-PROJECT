@@ -1,0 +1,21 @@
+[project]
+name = "trisula"
+version = "0.1.0"
+description = "LLM review layer on top of CodeQL, with an evaluation harness for OWASP Benchmark"
+requires-python = ">=3.12"
+license = "MIT"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+extend-exclude = ["targets", ".cache"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.format]
+# Blok kode di dokumen desain adalah ilustrasi, bukan kode yang dijalankan.
+exclude = ["*.md"]
