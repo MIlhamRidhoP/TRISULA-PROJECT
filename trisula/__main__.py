@@ -35,6 +35,17 @@ def _parse_sarif(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
+def _review(args: argparse.Namespace, config: Config) -> int:
+    from trisula.review import run_review
+
+    scenario = config.llm.scenarios.get(args.scenario)
+    if scenario is None:
+        raise TrisulaError(f"scenario {args.scenario} is not configured")
+    runs = [args.run] if args.run else list(range(1, scenario.runs + 1))
+    run_review(config, args.model, args.scenario, runs, args.limit)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trisula", description="LLM review on top of CodeQL findings.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="path to trisula.yml")
@@ -58,6 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--scenario", required=True, choices=["B", "C"])
     review.add_argument("--run", type=int, help="single run number; default runs all configured runs")
     review.add_argument("--limit", type=int, help="review only the first N files")
+    review.set_defaults(handler=_review)
 
     commands.add_parser("ensemble", help="normalize verdicts and build the ensemble scenario")
     commands.add_parser("evaluate", help="compute metrics against ground truth")

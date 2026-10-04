@@ -30,6 +30,18 @@ Keputusan yang dibutuhkan:
 Sampai diputuskan, pipeline penuh pada data asli tidak bisa melewati tahap `sanitize`. Demo dan tes memakai
 fixture sendiri dengan `allowed_matches: [X-XSS-Protection]`.
 
+## Hasil pengecekan dokumentasi provider (4 Oktober 2026)
+
+- Gemini: halaman thinking menyebut `gemini-3.1-pro-preview` menerima `low`, `medium`, `high`. Jadi
+  `reasoning: medium` di konfigurasi valid dan tidak perlu menjadi open question. Halaman structured output kini
+  hanya mencontohkan Interactions API (`client.interactions.create` dengan `response_format`). Adaptor tetap
+  memakai `generate_content` dengan `response_json_schema` sesuai PROVIDERS.md, karena SDK google-genai 2.28 masih
+  menyediakannya dan dokumentasi tidak menandainya deprecated.
+- GPT-5.3-codex: hanya Responses API, effort `low`/`medium`/`high`/`xhigh`, mendukung structured outputs.
+- Grok 4.7: `reasoning: {"effort": ...}` di Responses API, nilai `low`/`medium`/`high`/`xhigh`.
+- Retry bawaan SDK dimatikan (`max_retries=0` untuk openai, `HttpRetryOptions(attempts=1)` untuk google-genai)
+  supaya setiap percobaan tercatat di log TRISULA.
+
 ## Penyimpangan dari struktur di CLAUDE.md
 
 - Sampling dan sanitasi ditulis sebagai `trisula/sampling.py` dan `trisula/sanitize.py`, bukan di `tools/`,

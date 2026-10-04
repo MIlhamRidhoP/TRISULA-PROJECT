@@ -4,7 +4,8 @@ PLAN.md
 HANDOFF.md
 
 targets/
-results/raw/
+# Semua keluaran pipeline dibangkitkan ulang. Hasil eksperimen final di-commit dengan `git add -f`.
+results/
 .cache/
 .env
 .env.*
