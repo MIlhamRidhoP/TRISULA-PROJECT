@@ -199,3 +199,98 @@ jobs:
             results/verdicts/
             results/raw/
           if-no-files-found: warn
+
+  aggregate:
+    needs: [prefilter, codeql, review]
+    # Tetap berjalan jika sebagian kombinasi review gagal, supaya hasil yang ada tetap dievaluasi.
+    if: >-
+      !cancelled() && needs.codeql.result == 'success' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-trisula
+      - uses: actions/download-artifact@v8
+        with:
+          name: target
+      - uses: actions/download-artifact@v8
+        with:
+          name: codeql
+          path: results/codeql
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: review-*
+          path: results
+          merge-multiple: true
+      - run: python -m trisula ensemble
+      - run: python -m trisula evaluate
+      - uses: actions/upload-artifact@v7
+        with:
+          name: aggregate
+          path: |
+            results/findings.jsonl
+            results/summary.csv
+            results/summary.json
+            results/per_case.csv
+          if-no-files-found: error
+
+  report:
+    needs: [prefilter, aggregate]
+    if: >-
+      !cancelled() && needs.aggregate.result == 'success' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-trisula
+      - uses: actions/download-artifact@v8
+        with:
+          name: target
+      - uses: actions/download-artifact@v8
+        with:
+          name: codeql
+          path: results/codeql
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: review-*
+          path: results
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: aggregate
+          path: results
+      - run: python -m trisula report
+
+      # Tanpa input category, tiap file memakai automationDetails.id-nya (trisula-<model>/), sehingga tiap model
+      # tampil sebagai tool terpisah di tab Security.
+      - if: hashFiles('results/sarif/*.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results/sarif
+      - if: github.event_name == 'pull_request' && hashFiles('results/pr_comment.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file results/pr_comment.md --edit-last --create-if-none
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: report
+          path: |
+            results/report.html
+            results/figures/
+            results/sarif/
+            results/pr_comment.md
+            results/summary.json
+            results/summary.csv
+          if-no-files-found: warn

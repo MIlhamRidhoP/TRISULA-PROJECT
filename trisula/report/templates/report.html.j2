@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TRISULA report</title>
+<style>
+  :root {
+    --bg: #ffffff; --surface: #f6f6f4; --ink: #1d1d1b; --muted: #5f5f5a; --rule: #dcdcd6; --accent: #1f4e79;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --surface: #1f1f1d; --ink: #ececea; --muted: #a3a39d; --rule: #3a3a37; --accent: #8db8e0; }
+    figure svg { background: #ffffff; border-radius: 4px; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  h2 { font-size: 1.25rem; margin: 40px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  h3 { font-size: 1rem; margin: 24px 0 8px; }
+  p.meta, .note { color: var(--muted); font-size: 0.875rem; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
+  td.num, th.num { text-align: right; }
+  .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  figure { margin: 0; padding: 12px; background: var(--surface); border-radius: 6px; }
+  figure svg { width: 100%; height: auto; }
+  figcaption { color: var(--muted); font-size: 0.8rem; margin-top: 6px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+  label { font-size: 0.875rem; color: var(--muted); }
+  select { margin-left: 4px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; padding: 2px 6px; }
+  code { font-size: 0.85em; }
+  .sources span { display: inline-block; margin: 0 4px 2px 0; padding: 0 6px; border: 1px solid var(--rule); border-radius: 10px; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>TRISULA report</h1>
+<p class="meta">Generated {{ generated_at }}. CodeQL suite <code>{{ report.codeql.query_suite }}</code>,
+analysis time {{ fmt(report.codeql.duration_seconds, 0) }} s. Main analysis uses run {{ report.primary_run }}.
+{{ case_count }} test cases.</p>
+
+<h2>Evaluation</h2>
+<h3>Metrics per scenario</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>Scenario</th><th>Run</th><th>CWE</th><th class="num">TP</th><th class="num">FP</th><th class="num">FN</th><th class="num">TN</th>
+  <th class="num">TPR</th><th class="num">FPR</th><th class="num">Precision</th><th class="num">F1</th><th class="num">Accuracy</th><th class="num">Score</th></tr></thead>
+  <tbody>
+  {% for scenario, entry in report.scenarios.items() %}{% for cwe, m in entry.metrics.items() %}
+  <tr><td>{{ scenario }}</td><td>{{ entry.run }}</td><td>{{ cwe }}</td>
+    <td class="num">{{ m.tp }}</td><td class="num">{{ m.fp }}</td><td class="num">{{ m.fn }}</td><td class="num">{{ m.tn }}</td>
+    <td class="num">{{ fmt(m.tpr) }}</td><td class="num">{{ fmt(m.fpr) }}</td><td class="num">{{ fmt(m.precision) }}</td>
+    <td class="num">{{ fmt(m.f1) }}</td><td class="num">{{ fmt(m.accuracy) }}</td><td class="num">{{ fmt(m.benchmark_score) }}</td></tr>
+  {% endfor %}{% endfor %}
+  </tbody>
+</table></div>
+{% if report.notes %}<p class="note">n/a: zero denominator. {{ report.notes | length }} cells affected, listed in summary.json.</p>{% endif %}
+
+{% if figures %}
+<h3>Figures</h3>
+<div class="figures">
+  {% for name, svg in figures.items() %}<figure>{{ svg | safe }}<figcaption>{{ captions[name] }}</figcaption></figure>{% endfor %}
+</div>
+{% endif %}
+
+{% if sast_sentences %}
+<h3>What the LLM did with CodeQL findings (scenario B)</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>Scenario</th><th>Action</th><th class="num">Correct</th><th class="num">Wrong</th></tr></thead>
+  <tbody>
+  {% for row in sast_rows %}<tr><td>{{ row.scenario }}</td><td>{{ row.action }}</td><td class="num">{{ row.correct }}</td><td class="num">{{ row.wrong }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% for sentence in sast_sentences %}<p class="note">{{ sentence }}</p>{% endfor %}
+{% endif %}
+
+{% if consistency_rows %}
+<h3>Consistency across runs</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>Scenario</th><th class="num">Runs</th><th class="num">Flip rate</th><th class="num">Pairwise agreement</th><th class="num">Score mean</th><th class="num">Score SD</th><th class="num">Majority score</th></tr></thead>
+  <tbody>
+  {% for row in consistency_rows %}<tr><td>{{ row.scenario }}</td><td class="num">{{ row.runs }}</td><td class="num">{{ fmt(row.flip_rate) }}</td>
+    <td class="num">{{ fmt(row.agreement) }}</td><td class="num">{{ fmt(row.score_mean) }}</td><td class="num">{{ fmt(row.score_sd) }}</td><td class="num">{{ fmt(row.majority_score) }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+
+{% if cost_rows %}
+<h3>Time and cost (main run)</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>Scenario</th><th>Model ID</th><th>Reasoning</th><th class="num">Calls</th><th class="num">Cache hits</th><th class="num">Tokens in / out</th>
+  <th class="num">Cost (USD)</th><th class="num">Per case</th><th class="num">LLM time (s)</th><th class="num">Wall (s)</th><th class="num">Pipeline (s)</th></tr></thead>
+  <tbody>
+  {% for row in cost_rows %}<tr><td>{{ row.scenario }}</td><td><code>{{ row.model_id }}</code></td><td>{{ row.reasoning }}</td><td class="num">{{ row.calls }}</td><td class="num">{{ row.cache_hits }}</td>
+    <td class="num">{{ row.input_tokens }} / {{ row.output_tokens }}</td><td class="num">{{ fmt(row.cost_usd, 4) }}</td><td class="num">{{ fmt(row.cost_per_case_usd, 5) }}</td>
+    <td class="num">{{ fmt(row.llm_latency_seconds, 1) }}</td><td class="num">{{ fmt(row.wall_seconds, 1) }}</td><td class="num">{{ fmt(row.pipeline_seconds, 1) }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="note">Cost uses list prices from the configuration. Cached responses report the cost of the original call.</p>
+{% endif %}
+
+<h3>LLM errors and fallbacks</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>Scenario</th><th class="num">Cases</th><th class="num">Errors</th><th class="num">Error rate</th><th>By kind</th><th class="num">Fallbacks to CodeQL</th><th>Off-category alerts</th></tr></thead>
+  <tbody>
+  {% for scenario, entry in report.scenarios.items() %}<tr><td>{{ scenario }}</td><td class="num">{{ entry.errors.cases }}</td><td class="num">{{ entry.errors.errors }}</td>
+    <td class="num">{{ fmt(entry.errors.error_rate) }}</td><td>{% for kind, n in entry.errors.by_kind.items() %}{{ kind }}={{ n }} {% endfor %}</td>
+    <td class="num">{{ entry.fallbacks }}</td><td>{% for cwe, n in entry.off_category_alerts.items() %}{{ cwe }}={{ n }} {% endfor %}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+
+{% if report.mcnemar %}
+<h3>McNemar tests (pooled, main run, Holm-corrected)</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>Comparison</th><th>Question</th><th class="num">Cases</th><th class="num">b</th><th class="num">c</th><th>Method</th><th class="num">Statistic</th><th class="num">p</th><th class="num">p (Holm)</th></tr></thead>
+  <tbody>
+  {% for c in report.mcnemar %}<tr><td>{{ c.first }} vs {{ c.second }}</td><td>{{ c.question }}</td><td class="num">{{ c.cases }}</td><td class="num">{{ c.b_first_only_correct }}</td>
+    <td class="num">{{ c.c_second_only_correct }}</td><td>{{ c.method }}</td><td class="num">{{ fmt(c.statistic) }}</td><td class="num">{{ fmt(c.p_value, 4) }}</td>
+    <td class="num">{{ fmt(c.p_holm, 4) }}{% if c.significant %} *{% endif %}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="note">b: only the first scenario is correct. c: only the second is correct. * p (Holm) below {{ alpha }}.</p>
+{% endif %}
+
+<h2>Developer view</h2>
+<p class="meta">Findings from CodeQL and from each model in scenario B, run {{ report.primary_run }}, grouped by file and CWE.
+Fallback verdicts are not counted as model votes.</p>
+<div class="filters">
+  <label>CWE<select id="filter-cwe"><option value="">all</option>{% for cwe in cwe_ids %}<option>{{ cwe }}</option>{% endfor %}</select></label>
+  <label>Source<select id="filter-source"><option value="">all</option>{% for source in sources %}<option>{{ source }}</option>{% endfor %}</select></label>
+</div>
+<div class="table-wrap"><table id="findings">
+  <thead><tr><th>Location</th><th>CWE</th><th>Sources</th><th class="num">Agree</th><th>Confidence</th><th>Reason</th><th>Recommendation</th></tr></thead>
+  <tbody>
+  {% for f in findings %}<tr data-cwe="{{ f.cwe }}" data-sources=" {{ f.sources | join(' ') }} ">
+    <td><code>{{ f.file.rsplit('/', 1)[-1] }}{% if f.line %}:{{ f.line }}{% endif %}</code></td><td>{{ f.cwe }}</td>
+    <td class="sources">{% for s in f.sources | sort %}<span>{{ s }}</span>{% endfor %}</td><td class="num">{{ f.agreement }}</td><td>{{ f.confidence or "" }}</td>
+    <td>{% for source, reason in f.reasons.items() %}<div><strong>{{ source }}:</strong> {{ reason }}</div>{% endfor %}</td><td>{{ f.recommendation or "" }}</td></tr>
+  {% else %}<tr><td colspan="7">No findings.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+</main>
+<script>
+  const cwe = document.getElementById("filter-cwe");
+  const source = document.getElementById("filter-source");
+  function applyFilters() {
+    for (const row of document.querySelectorAll("#findings tbody tr[data-cwe]")) {
+      const cweOk = !cwe.value || row.dataset.cwe === cwe.value;
+      const sourceOk = !source.value || row.dataset.sources.includes(" " + source.value + " ");
+      row.hidden = !(cweOk && sourceOk);
+    }
+  }
+  cwe.addEventListener("change", applyFilters);
+  source.addEventListener("change", applyFilters);
+</script>
+</body>
+</html>
