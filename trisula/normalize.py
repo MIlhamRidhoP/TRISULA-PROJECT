@@ -4,7 +4,8 @@ from pathlib import Path
 from trisula.codeql import codeql_findings, load_codeql_results
 from trisula.config import Config
 from trisula.llm.base import CaseOutcome
-from trisula.review import list_review_files, load_outcomes
+from trisula.prefilter import load_llm_files
+from trisula.review import load_outcomes
 from trisula.schema import Finding, SastAction
 
 log = logging.getLogger(__name__)
@@ -70,7 +71,7 @@ def verdict_files(config: Config) -> list[Path]:
 
 def build_findings(config: Config) -> list[Finding]:
     """Finding skenario A untuk semua file input LLM, ditambah semua putusan LLM di results/verdicts."""
-    files = list_review_files(config)
+    files = load_llm_files(config)
     known_files = set(files)
     baseline = codeql_findings(load_codeql_results(config).alerts, files, config.cwe_ids)
     codeql_index = {(f.file, f.cwe): f for f in baseline}

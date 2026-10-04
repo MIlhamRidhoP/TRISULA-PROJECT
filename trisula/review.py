@@ -9,24 +9,13 @@ from pathlib import Path
 from tenacity.wait import wait_base
 
 from trisula.codeql import load_codeql_results
-from trisula.config import LANGUAGE_EXTENSIONS, Config, TrisulaError
+from trisula.config import Config, TrisulaError
 from trisula.llm import create_adapter
 from trisula.llm.base import CallLogWriter, CaseOutcome, ReviewCase, Reviewer
 from trisula.llm.prompt import load_prompt_template
+from trisula.prefilter import load_llm_files
 
 log = logging.getLogger(__name__)
-
-
-def list_review_files(config: Config) -> list[str]:
-    extensions = LANGUAGE_EXTENSIONS[config.project.language]
-    files = []
-    for llm_path in config.project.llm_paths:
-        files.extend(
-            path.relative_to(config.root).as_posix()
-            for path in config.resolve(llm_path).rglob("*")
-            if path.is_file() and path.suffix in extensions
-        )
-    return sorted(files)
 
 
 def verdicts_path(config: Config, scenario_name: str, run: int) -> Path:
@@ -60,9 +49,9 @@ def run_review(
         for alert in load_codeql_results(config).alerts:
             alerts_by_file[alert.file].append(alert)
 
-    files = list_review_files(config)[:limit]
+    files = load_llm_files(config)[:limit]
     if not files:
-        raise TrisulaError(f"no files to review under {config.project.llm_paths}")
+        raise TrisulaError("prefilter left no files to review")
     cases = [
         ReviewCase(file, config.resolve(file).read_text(encoding="utf-8"), alerts_by_file.get(file, []))
         for file in files

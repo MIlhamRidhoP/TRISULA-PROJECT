@@ -15,6 +15,8 @@ def make_config(root: Path, **overrides) -> Config:
     raw["benchmark"]["sample"]["per_category"] = 6
     raw["benchmark"]["sanitize"]["allowed_matches"] = ["X-XSS-Protection"]
     raw["llm"]["prompt_file"] = str(Path(raw["llm"]["prompt_file"]).resolve())
+    # Tes tidak bergantung pada Gitleaks terpasang; pola kunci bawaan tetap berjalan.
+    raw["prefilter"]["gitleaks"] = False
     for dotted, value in overrides.items():
         *parents, key = dotted.split(".")
         target = raw
@@ -32,12 +34,14 @@ def mini_config(tmp_path: Path) -> Config:
 def prepare_workspace(root: Path, **overrides) -> Config:
     """Fixture benchmark_mini yang sudah disampling, disanitasi, dan punya alerts.json dari SARIF fixture."""
     from trisula.codeql import run_parse_sarif
+    from trisula.prefilter import run_prefilter
     from trisula.sampling import run_sample
     from trisula.sanitize import run_sanitize
 
     config = make_config(root, **overrides)
     run_sample(config, source_dir=BENCHMARK_MINI)
     run_sanitize(config)
+    run_prefilter(config)
     run_parse_sarif(config, [FIXTURES / "codeql/demo.sarif"], FIXTURES / "codeql/timing.json")
     return config
 

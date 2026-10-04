@@ -67,6 +67,13 @@ def _report(args: argparse.Namespace, config: Config) -> int:
     return 0
 
 
+def _prefilter(args: argparse.Namespace, config: Config) -> int:
+    from trisula.prefilter import run_prefilter
+
+    run_prefilter(config, args.gitleaks_report)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trisula", description="LLM review on top of CodeQL findings.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH, help="path to trisula.yml")
@@ -79,7 +86,9 @@ def build_parser() -> argparse.ArgumentParser:
         "sanitize", help="remove comments and identifying names from sampled cases"
     )
     sanitize.set_defaults(handler=_sanitize)
-    commands.add_parser("prefilter", help="select files that may be sent to an LLM")
+    prefilter = commands.add_parser("prefilter", help="select files that may be sent to an LLM")
+    prefilter.add_argument("--gitleaks-report", type=Path, help="existing gitleaks JSON report to use")
+    prefilter.set_defaults(handler=_prefilter)
     parse_sarif = commands.add_parser("parse-sarif", help="convert CodeQL SARIF into findings")
     parse_sarif.add_argument("--sarif", type=Path, nargs="*", help="default: <results>/codeql/*.sarif")
     parse_sarif.add_argument("--timing", type=Path, help="default: <results>/codeql/timing.json")

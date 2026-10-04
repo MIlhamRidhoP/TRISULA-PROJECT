@@ -92,6 +92,18 @@ jobs:
           mkdir -p results
           echo "{\"maven_compile\": \"${{ steps.compile.outcome }}\"}" > results/compile_status.json
 
+      - env:
+          GITLEAKS_VERSION: 8.30.1
+        working-directory: ${{ runner.temp }}
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          curl -sSfLO "${base}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" gitleaks
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - run: python -m trisula prefilter
+
       - uses: actions/upload-artifact@v7
         with:
           name: target
@@ -99,6 +111,7 @@ jobs:
             targets/
             data/
             results/compile_status.json
+            results/prefilter.json
           if-no-files-found: error
 
   codeql:
